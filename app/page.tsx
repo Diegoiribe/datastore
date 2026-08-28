@@ -184,10 +184,29 @@ export default function Home() {
   const selectedLabel = selectedCategories.length === categories.length ? "Todas las categorías" : categories.filter((item) => selectedCategories.includes(item.key)).map((item) => item.label).join(", ");
 
   return (
+    <div className="site-page">
+      <header className="site-header">
+        <strong>DataStore</strong>
+        <nav aria-label="Navegación principal">
+          <button>Resumen</button>
+          <button className="active">Reportes</button>
+          <button onClick={() => setPeopleMode(true)}>Colaboradores</button>
+        </nav>
+        <span className={usingDemo ? "sync-status demo" : "sync-status"}>
+          <i /> {usingDemo ? "Demostración" : "Sincronizado"}
+        </span>
+      </header>
+
+      <section className="page-intro">
+        <span>INTELIGENCIA DE CAPACITACIÓN</span>
+        <h1>Reportes</h1>
+        <p>Consulta el avance mensual, compara regiones y encuentra cursos pendientes.</p>
+      </section>
+
     <main className="workspace-shell">
       <aside className={`filter-rail ${peopleMode ? "is-expanded" : ""}`}>
         <header className="rail-heading">
-          <div><span className="eyebrow">DATASTORE</span><h1>Capacitación</h1></div>
+          <div><span className="eyebrow">BIBLIOTECA</span><h1>Categorías</h1></div>
           <span className={usingDemo ? "data-dot demo" : "data-dot"} title={usingDemo ? "Datos de muestra" : "Conectado con Firebase"} />
         </header>
 
@@ -218,22 +237,30 @@ export default function Home() {
 
       <section className="report-space">
         <header className="topbar">
-          <div className="report-name"><span className="eyebrow">REPORTE MENSUAL</span><strong title={selectedLabel}>{selectedLabel}</strong></div>
-          <div className="top-filters">
-            <label><span>Año</span><select value={year} onChange={(event) => setYear(event.target.value)}><option>2026</option></select></label>
-            <label><span>Mes</span><select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item, index) => <option value={String(index + 1)} key={item}>{item}</option>)}</select></label>
-            <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
-            <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
-            <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
-          </div>
+          <div className="report-name"><span className="mini-doc"><i /><i /><i /></span><span><strong title={selectedLabel}>{selectedLabel}</strong><small>Reporte mensual · {period}</small></span></div>
+          <span className={usingDemo ? "status-pill demo" : "status-pill"}>{loading ? "Consultando" : usingDemo ? "Demostración" : "Firebase"}</span>
         </header>
 
         <div className="report-scroll">
           <article className="sheet">
             <header className="sheet-title">
-              <div><span className="eyebrow">{peopleMode ? "CURSOS PENDIENTES" : "AVANCE DE CAPACITACIÓN"}</span><h2>{peopleMode ? "Detalle por colaborador" : "Resumen general"}</h2><p>{usingDemo ? "Vista de demostración · publica datos desde RunSQL para reemplazarla" : `Información consolidada · ${period}`}</p></div>
-              <span className={usingDemo ? "status-pill demo" : "status-pill"}>{loading ? "Consultando" : usingDemo ? "Demostración" : "Firebase"}</span>
+              <div><span className="eyebrow">{peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span><h2>{peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
+
+            <div className="sheet-toolbar" aria-label="Filtros del reporte">
+              <label><span>Año</span><select value={year} onChange={(event) => setYear(event.target.value)}><option>2026</option></select></label>
+              <label><span>Mes</span><select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item, index) => <option value={String(index + 1)} key={item}>{item}</option>)}</select></label>
+              <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
+              <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
+              <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
+              <button className={peopleMode ? "toolbar-people active" : "toolbar-people"} onClick={() => setPeopleMode(!peopleMode)}>◎</button>
+            </div>
+
+            <section className="report-lead">
+              <h3>{selectedLabel}</h3>
+              <p>{peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde RunSQL."}</p>
+              <small>{usingDemo ? "Vista de demostración · publica datos desde RunSQL para reemplazarla." : `Fecha de corte del periodo ${period}.`}</small>
+            </section>
 
             {!peopleMode ? (
               <>
@@ -268,5 +295,6 @@ export default function Home() {
         </div>
       </section>
     </main>
+    </div>
   );
 }

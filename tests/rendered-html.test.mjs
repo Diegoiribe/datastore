@@ -17,7 +17,7 @@ test("renders the DataStore dashboard", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /<title>DataStore · Capacitación<\/title>/i);
-  assert.match(html, /Resumen general/);
+  assert.match(html, /Reporte de capacitación/);
   assert.match(html, /Ver colaboradores/);
   assert.doesNotMatch(html, /codex-preview/);
 });
