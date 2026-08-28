@@ -90,8 +90,12 @@ export default function Home() {
   const [nameQuery, setNameQuery] = useState("");
   const [pendingRows, setPendingRows] = useState<PendingRow[]>(fallbackPending);
   const [loadingPending, setLoadingPending] = useState(false);
+  const [pendingError, setPendingError] = useState("");
+  const [showAllRegions, setShowAllRegions] = useState(false);
+  const [showAllCourses, setShowAllCourses] = useState(false);
   const [loading, setLoading] = useState(true);
   const [usingDemo, setUsingDemo] = useState(true);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const period = `${year}-${month.padStart(2, "0")}`;
 
   useEffect(() => {
@@ -107,12 +111,19 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
+    if (!selectedCategories.length) {
+      setDashboards([]);
+      setUsingDemo(true);
+      setLoading(false);
+      return () => { active = false; };
+    }
     setLoading(true);
     Promise.all(selectedCategories.map((category) => loadCategoryDashboard(category, period)))
       .then((loaded) => {
         if (!active) return;
         setDashboards(loaded);
         setUsingDemo(false);
+        setLastSyncAt(new Date());
       })
       .catch(() => {
         if (!active) return;
@@ -123,7 +134,7 @@ export default function Home() {
     return () => { active = false; };
   }, [period, selectedCategories]);
 
-  const sourceMetrics = dashboards.length ? dashboards.flatMap((item) => item.metrics) : fallbackMetrics;
+  const sourceMetrics = !selectedCategories.length ? [] : dashboards.length ? dashboards.flatMap((item) => item.metrics) : fallbackMetrics;
   const availablePositions = useMemo(() => [...new Set(sourceMetrics.map((row) => row.puesto))].sort(), [sourceMetrics]);
   const availableRegions = useMemo(() => [...new Set(sourceMetrics.map((row) => row.region))].sort(), [sourceMetrics]);
   const availableCourses = useMemo(() => [...new Set(sourceMetrics.map((row) => row.curso))].sort(), [sourceMetrics]);
@@ -151,8 +162,22 @@ export default function Home() {
     return real.length ? real : [58, 63, 66, 71, 74, 78].map((value, index) => ({ label: ["Feb", "Mar", "Abr", "May", "Jun", "Jul"][index], value }));
   }, [dashboards, year]);
 
-  const toggleCategory = (key: string) => {
-    setSelectedCategories((current) => current.includes(key) ? (current.length === 1 ? current : current.filter((item) => item !== key)) : [...current, key]);
+  const resetCategoryFilters = () => {
+    setPositions([]);
+    setRegion("all");
+    setCourse("all");
+    setNameQuery("");
+    setShowAllRegions(false);
+    setShowAllCourses(false);
+  };
+
+  const selectCategory = (key: string) => {
+    resetCategoryFilters();
+    setSelectedCategories([key]);
+  };
+
+  const addCategoryToSharedView = (key: string) => {
+    setSelectedCategories((current) => current.includes(key) ? current : [...current, key]);
   };
 
   const togglePosition = (value: string) => {
@@ -162,11 +187,17 @@ export default function Home() {
   const loadPeople = async () => {
     if (!dashboards.length) { setPendingRows(fallbackPending); return; }
     setLoadingPending(true);
+    setPendingError("");
     try {
       const requests = dashboards.flatMap((dashboard) => dashboard.pendingSections
         .filter((section) => (region === "all" || section.region === region) && (!positions.length || positions.includes(section.position)))
         .map((section) => loadPendingSection(dashboard, section)));
       setPendingRows((await Promise.all(requests)).flat());
+    } catch (error) {
+      setPendingRows([]);
+      setPendingError(
+        error instanceof Error ? error.message : "No se pudo cargar el detalle.",
+      );
     } finally {
       setLoadingPending(false);
     }
@@ -181,24 +212,31 @@ export default function Home() {
     (!positions.length || positions.includes(row.puesto)),
   );
 
-  const selectedLabel = selectedCategories.length === categories.length ? "Todas las categorías" : categories.filter((item) => selectedCategories.includes(item.key)).map((item) => item.label).join(", ");
+  const selectedLabel = !selectedCategories.length
+    ? "Selecciona una categoría"
+    : categories.length > 1 && selectedCategories.length === categories.length
+      ? "Todas las categorías"
+      : categories.filter((item) => selectedCategories.includes(item.key)).map((item) => item.label).join(", ");
+  const syncLabel = loading ? "Sincronizando…" : usingDemo ? "Sin datos" : "Sincronizado";
+  const syncTitle = loading
+    ? "Consultando Firebase"
+    : usingDemo
+      ? "No se encontraron datos publicados para los filtros seleccionados"
+      : `Última sincronización: ${lastSyncAt?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) ?? "ahora"}`;
 
   return (
     <div className="site-page">
       <header className="site-header">
         <strong>DataStore</strong>
         <nav aria-label="Navegación principal">
-          <button>Resumen</button>
           <button className="active">Reportes</button>
-          <button onClick={() => setPeopleMode(true)}>Colaboradores</button>
         </nav>
-        <span className={usingDemo ? "sync-status demo" : "sync-status"}>
-          <i /> {usingDemo ? "Demostración" : "Sincronizado"}
+        <span className={`sync-status ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>
+          <i /> {syncLabel}
         </span>
       </header>
 
       <section className="page-intro">
-        <span>INTELIGENCIA DE CAPACITACIÓN</span>
         <h1>Reportes</h1>
         <p>Consulta el avance mensual, compara regiones y encuentra cursos pendientes.</p>
       </section>
@@ -207,16 +245,23 @@ export default function Home() {
       <aside className="filter-rail">
         <header className="rail-heading">
           <div><span className="eyebrow">BIBLIOTECA</span><h1>Categorías</h1></div>
-          <span className={usingDemo ? "data-dot demo" : "data-dot"} title={usingDemo ? "Datos de muestra" : "Conectado con Firebase"} />
+          <span className={`data-dot ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle} />
         </header>
 
-        <div className="rail-section-title"><span>Categorías</span><small>{selectedCategories.length} activas</small></div>
+        <div className="rail-section-title"><span>Categorías</span><small>{selectedCategories.length} {selectedCategories.length === 1 ? "activa" : "activas"}</small></div>
         <nav className="category-list" aria-label="Categorías del reporte">
-          <button className={selectedCategories.length === categories.length ? "category active" : "category"} onClick={() => setSelectedCategories(categories.map((item) => item.key))}>
-            <span className="all-icon">•••</span><span>Todas las categorías</span><b>{selectedCategories.length === categories.length ? "✓" : ""}</b>
-          </button>
+          {categories.length > 1 && (
+            <button className={selectedCategories.length === categories.length ? "category active" : "category"} onClick={() => { resetCategoryFilters(); setSelectedCategories((current) => current.length === categories.length ? [] : categories.map((item) => item.key)); }}>
+              <span className="all-icon">•••</span><span>Todas las categorías</span><b>{selectedCategories.length === categories.length ? "✓" : ""}</b>
+            </button>
+          )}
           {categories.map((category) => (
-            <button className={selectedCategories.includes(category.key) ? "category active" : "category"} key={category.key} onClick={() => toggleCategory(category.key)}>
+            <button
+              className={selectedCategories.includes(category.key) ? "category active" : "category"}
+              key={category.key}
+              onClick={() => selectCategory(category.key)}
+              onContextMenu={(event) => { event.preventDefault(); addCategoryToSharedView(category.key); }}
+            >
               <span className="doc-icon"><i /><i /><i /></span><span>{category.label}</span><b>{selectedCategories.includes(category.key) ? "✓" : ""}</b>
             </button>
           ))}
@@ -227,7 +272,7 @@ export default function Home() {
       <section className="report-space">
         <header className="topbar">
           <div className="report-name"><span className="mini-doc"><i /><i /><i /></span><span><strong title={selectedLabel}>{selectedLabel}</strong><small>Reporte mensual · {period}</small></span></div>
-          <span className={usingDemo ? "status-pill demo" : "status-pill"}>{loading ? "Consultando" : usingDemo ? "Demostración" : "Firebase"}</span>
+          <span className={`status-pill ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>{syncLabel}</span>
         </header>
 
         <div className="report-scroll">
@@ -243,7 +288,7 @@ export default function Home() {
                   <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
                   <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
                   <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
-                  <button className="toolbar-people active" onClick={() => setPeopleMode(false)} aria-label="Volver al reporte" title="Volver al reporte">×</button>
+                  <button className="toolbar-people active" onClick={() => setPeopleMode(false)} aria-label="Volver al reporte" title="Volver al reporte"><span className="close-icon" aria-hidden="true" /></button>
                 </>
               ) : (
                 <>
@@ -260,7 +305,7 @@ export default function Home() {
             <section className="report-lead">
               <h3>{selectedLabel}</h3>
               <p>{peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde RunSQL."}</p>
-              <small>{usingDemo ? "Vista de demostración · publica datos desde RunSQL para reemplazarla." : `Fecha de corte del periodo ${period}.`}</small>
+              <small>{usingDemo ? "Aún no hay datos sincronizados para este periodo. Publica la información desde RunSQL." : `Fecha de corte del periodo ${period}.`}</small>
             </section>
 
             {!peopleMode ? (
@@ -279,16 +324,19 @@ export default function Home() {
                   <article className="panel ranking-panel">
                     <div className="panel-heading"><div><span>Ranking regional</span><small>Avance promedio</small></div></div>
                     {regionalRanking.slice(0, 5).map((item, index) => <div className="rank-row" key={item.label}><b>{String(index + 1).padStart(2, "0")}</b><span>{item.label}</span><strong>{item.progress.toFixed(1)}%</strong></div>)}
+                    <div className={showAllRegions ? "expandable-section is-open" : "expandable-section"}><div>{regionalRanking.slice(5).map((item, index) => <div className="rank-row" key={item.label}><b>{String(index + 6).padStart(2, "0")}</b><span>{item.label}</span><strong>{item.progress.toFixed(1)}%</strong></div>)}</div></div>
+                    {regionalRanking.length > 5 && <button className="show-more-button" onClick={() => setShowAllRegions((current) => !current)}><span>{showAllRegions ? "Mostrar menos" : `Ver ${regionalRanking.length - 5} más`}</span><span className="more-icon-shell" aria-hidden="true"><i className={showAllRegions ? "more-icon collapse" : "more-icon"} /></span></button>}
                   </article>
                   <article className="panel course-panel">
                     <div className="panel-heading"><div><span>Avance por curso</span><small>Selecciona un curso para filtrar</small></div></div>
-                    <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div>
+                    <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}<div className={showAllCourses ? "expandable-section is-open" : "expandable-section"}><div>{courseProgress.slice(7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div></div></div>
+                    {courseProgress.length > 7 && <button className="show-more-button" onClick={() => setShowAllCourses((current) => !current)}><span>{showAllCourses ? "Mostrar menos" : `Ver ${courseProgress.length - 7} más`}</span><span className="more-icon-shell" aria-hidden="true"><i className={showAllCourses ? "more-icon collapse" : "more-icon"} /></span></button>}
                   </article>
                 </section>
               </>
             ) : (
               <section className="people-results">
-                <div className="people-summary"><span>{visiblePending.length.toLocaleString("es-MX")} pendientes encontrados</span><small>La búsqueda utiliza únicamente los bloques de las secciones elegidas.</small></div>
+                <div className={pendingError ? "people-summary error" : "people-summary"}><span>{loadingPending ? "Cargando colaboradores…" : pendingError || `${visiblePending.length.toLocaleString("es-MX")} pendientes encontrados`}</span><small>{pendingError ? "Verifica que el backend local de RunSQL esté encendido." : "La búsqueda utiliza únicamente los bloques de las secciones elegidas."}</small></div>
                 <div className="people-table"><div className="people-table-head"><span>Colaborador</span><span>Puesto</span><span>Región</span><span>Curso pendiente</span></div>{visiblePending.slice(0, 100).map((person, index) => <div className="person-row" key={`${person.numero_persona}-${person.curso}-${index}`}><span><b>{person.nombre}</b><small>{person.numero_persona} · Tienda {person.tienda ?? "—"}</small></span><span>{person.puesto}</span><span>{person.region}</span><span>{person.curso}</span></div>)}</div>
               </section>
             )}

@@ -30,9 +30,10 @@ La aplicación se abre normalmente en `http://localhost:3000`.
 
 ## Firebase
 
-La configuración web del proyecto `capacitaciones-api` está definida en
-`lib/firebase.ts` y puede sobrescribirse con las variables documentadas en
-`.env.example`.
+DataStore consulta Firestore mediante el backend local de RunSQL para mantener
+la cuenta de servicio fuera del navegador y respetar las reglas privadas de la
+base. La URL se configura con `NEXT_PUBLIC_RUNSQL_API_URL` y por defecto es
+`http://localhost:8000`.
 
 DataStore espera la estructura que genera RunSQL:
 
@@ -44,6 +45,10 @@ periods/{AAAA-MM}/categories/{categoria}
 dashboard_categories/{categoria}
 └── periods: resumen histórico
 ```
+
+Cada fragmento tabular guarda `columns`, `row_count` y una lista plana
+`values`. Esto evita arreglos anidados, que Firestore no permite. DataStore
+mantiene compatibilidad de lectura con el formato anterior basado en `rows`.
 
 Las gráficas cargan el cubo agregado. Los colaboradores se descargan solamente
 cuando se abre ese modo y únicamente para las secciones seleccionadas. Los
