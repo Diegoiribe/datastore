@@ -204,7 +204,7 @@ export default function Home() {
       </section>
 
     <main className="workspace-shell">
-      <aside className={`filter-rail ${peopleMode ? "is-expanded" : ""}`}>
+      <aside className="filter-rail">
         <header className="rail-heading">
           <div><span className="eyebrow">BIBLIOTECA</span><h1>Categorías</h1></div>
           <span className={usingDemo ? "data-dot demo" : "data-dot"} title={usingDemo ? "Datos de muestra" : "Conectado con Firebase"} />
@@ -236,7 +236,7 @@ export default function Home() {
               <div><span className="eyebrow">{peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span><h2>{peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
-            <div className="sheet-toolbar" aria-label="Filtros del reporte">
+            <div className={peopleMode ? "sheet-toolbar people" : "sheet-toolbar"} aria-label="Filtros del reporte">
               {peopleMode ? (
                 <>
                   <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input autoFocus value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>
