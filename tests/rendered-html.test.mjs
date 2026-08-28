@@ -18,6 +18,6 @@ test("renders the DataStore dashboard", async () => {
   const html = await response.text();
   assert.match(html, /<title>DataStore · Capacitación<\/title>/i);
   assert.match(html, /Reporte de capacitación/);
-  assert.match(html, /Ver colaboradores/);
+  assert.match(html, /Buscar colaboradores/);
   assert.doesNotMatch(html, /codex-preview/);
 });

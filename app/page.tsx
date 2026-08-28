@@ -222,17 +222,6 @@ export default function Home() {
           ))}
         </nav>
 
-        {peopleMode && (
-          <section className="people-tools">
-            <div className="people-tools-heading"><div><span className="eyebrow">DETALLE</span><h3>Colaboradores</h3></div><button onClick={() => setPeopleMode(false)} aria-label="Cerrar">×</button></div>
-            <label className="search-field"><span>⌕</span><input value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>
-            <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
-            <SelectFilter label="Curso pendiente" value={course} options={availableCourses} onChange={setCourse} />
-            <button className="refresh-people" onClick={loadPeople} disabled={loadingPending}>{loadingPending ? "Consultando…" : "Actualizar resultados"}</button>
-          </section>
-        )}
-
-        <footer className="rail-footer"><button className="people-button" onClick={() => setPeopleMode(!peopleMode)}><span>◎</span>{peopleMode ? "Volver al tablero" : "Ver colaboradores"}</button></footer>
       </aside>
 
       <section className="report-space">
@@ -248,12 +237,24 @@ export default function Home() {
             </header>
 
             <div className="sheet-toolbar" aria-label="Filtros del reporte">
-              <label><span>Año</span><select value={year} onChange={(event) => setYear(event.target.value)}><option>2026</option></select></label>
-              <label><span>Mes</span><select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item, index) => <option value={String(index + 1)} key={item}>{item}</option>)}</select></label>
-              <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
-              <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
-              <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
-              <button className={peopleMode ? "toolbar-people active" : "toolbar-people"} onClick={() => setPeopleMode(!peopleMode)}>◎</button>
+              {peopleMode ? (
+                <>
+                  <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input autoFocus value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>
+                  <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
+                  <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
+                  <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
+                  <button className="toolbar-people active" onClick={() => setPeopleMode(false)} aria-label="Volver al reporte" title="Volver al reporte">×</button>
+                </>
+              ) : (
+                <>
+                  <label><span>Año</span><select value={year} onChange={(event) => setYear(event.target.value)}><option>2026</option></select></label>
+                  <label><span>Mes</span><select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item, index) => <option value={String(index + 1)} key={item}>{item}</option>)}</select></label>
+                  <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
+                  <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
+                  <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
+                  <button className="toolbar-people" onClick={() => setPeopleMode(true)} aria-label="Buscar colaboradores" title="Buscar colaboradores">◎</button>
+                </>
+              )}
             </div>
 
             <section className="report-lead">
