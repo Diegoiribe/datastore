@@ -1,16 +1,88 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CategoryDashboard,
   MetricRow,
   PendingRow,
+  PeriodSummary,
   listCategories,
   loadCategoryDashboard,
   loadPendingSection,
 } from "../lib/dashboard-data";
+import SatisfactionReport from "./SatisfactionReport";
 
-type CategoryOption = { key: string; label: string };
+type CategoryOption = { key: string; label: string; history?: Record<string, PeriodSummary> };
+
+function textKey(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function reportFamily(category: CategoryOption) {
+  if (category.key === "encuesta_de_satisfaccion") return { label: "Experiencia", description: "Satisfacción, recomendación y voz del participante" };
+  if (category.key === "staff") return { label: "Talento", description: "Seguimiento de capacitación corporativa" };
+  return { label: "Avance", description: "Cumplimiento, asignaciones y cursos pendientes" };
+}
+
+function reportTone(key: string) {
+  const preferred: Record<string, string> = {
+    almacenista: "cobalt", asesor: "forest", cajero: "coral", cobranza: "ink",
+    encuesta_de_satisfaccion: "violet", gerente: "sand", gerente_zona: "ink", staff: "cobalt",
+  };
+  if (preferred[key]) return preferred[key];
+  const tones = ["ink", "cobalt", "violet", "coral", "sand", "forest"];
+  return tones[[...key].reduce((total, character) => total + character.charCodeAt(0), 0) % tones.length];
+}
+
+function latestSharedPeriod(items: CategoryOption[]) {
+  const histories = items.map((item) => Object.keys(item.history ?? {}));
+  if (!histories.length || histories.some((periods) => !periods.length)) return undefined;
+  return histories[0].filter((period) => histories.every((periods) => periods.includes(period))).sort().at(-1);
+}
+
+const ReportCover = memo(function ReportCover({ category, compact = false }: { category: CategoryOption; compact?: boolean }) {
+  const family = reportFamily(category);
+  const artwork = {
+    almacenista: "/report-covers/almacenista-v2.png",
+    asesor: "/report-covers/asesor-v1.png",
+    cajero: "/report-covers/cajero-v2.png",
+    encuesta_de_satisfaccion: "/report-covers/encuesta-satisfaccion-v2.png",
+    gerente: "/report-covers/gerente-v1.png",
+  }[category.key] ?? null;
+  return <span className={`report-cover ${compact ? "compact " : ""}${artwork ? `has-artwork artwork-${category.key}` : `tone-${reportTone(category.key)}`}`} style={artwork ? { backgroundImage: `url(${artwork})` } : undefined} aria-hidden="true">
+    <span className="cover-rule" />
+    <small>{family.label}</small>
+    <strong>{category.label}</strong>
+    <i>UC</i>
+    <em>Universidad Corporativa Coppel</em>
+  </span>;
+});
+
+function LibraryFooter() {
+  return <footer className="library-footer">
+    <div className="footer-signature">
+      <span><small>Diseñado y desarrollado por</small><strong>Equipo de Efectividad y Proyectos</strong></span>
+    </div>
+    <p>Datos claros. Mejores decisiones.</p>
+    <div className="footer-meta"><span>Universidad Corporativa Coppel</span><small>Hecho con intención · 2026</small></div>
+  </footer>;
+}
+
+function UniversityBrand({ onClick }: { onClick(): void }) {
+  return <button className="university-brand" onClick={onClick} aria-label="Ir a reportes">
+    <span><strong>Universidad</strong><strong>Corporativa</strong><small>Coppel</small></span>
+  </button>;
+}
+
+function ReportSkeleton({ survey }: { survey: boolean }) {
+  return <div className={survey ? "report-skeleton survey" : "report-skeleton"} role="status" aria-label="Cargando reporte">
+    <div className="skeleton-toolbar">{Array.from({ length: survey ? 4 : 6 }, (_, index) => <i key={index} />)}</div>
+    <section className="skeleton-lead"><i /><i /><i /></section>
+    <section className="skeleton-metrics">{Array.from({ length: survey ? 4 : 3 }, (_, index) => <article key={index}><i /><b /><i /></article>)}</section>
+    <section className="skeleton-panels"><article><i /><b /></article><article><i /><b /></article></section>
+    <span className="sr-only">Cargando información del reporte…</span>
+  </div>;
+}
 
 const fallbackCategories: CategoryOption[] = [
   { key: "almacenista", label: "Almacenista" },
@@ -20,30 +92,6 @@ const fallbackCategories: CategoryOption[] = [
   { key: "gerente", label: "Gerente" },
   { key: "gerente_zona", label: "Gerente zona" },
   { key: "staff", label: "STAFF" },
-];
-
-const fallbackMetrics: MetricRow[] = [
-  ["Almacenista", "Noroeste", "Seguridad en tienda", 820, 741],
-  ["Almacenista", "Centro", "Seguridad en tienda", 760, 646],
-  ["Gerente Ventas", "Noroeste", "Liderazgo operativo", 540, 465],
-  ["Gerente Muebles", "Occidente", "Liderazgo operativo", 430, 331],
-  ["Asesor Ventas", "Noreste", "Experiencia del cliente", 980, 714],
-  ["Cajero", "Centro", "Prevención de fraudes", 610, 451],
-].map(([puesto, region, curso, total, completados]) => ({
-  puesto: String(puesto),
-  region: String(region),
-  curso: String(curso),
-  total: Number(total),
-  completados: Number(completados),
-  pendientes: Number(total) - Number(completados),
-  avance: Math.round((Number(completados) / Number(total)) * 10_000) / 100,
-}));
-
-const fallbackPending: PendingRow[] = [
-  { numero_persona: "104582", nombre: "Ana Sofía López", puesto: "Almacenista", region: "Noroeste", tienda: "1517", curso: "Seguridad en tienda" },
-  { numero_persona: "108341", nombre: "Luis Alberto Ruiz", puesto: "Gerente Ventas", region: "Noroeste", tienda: "1538", curso: "Liderazgo operativo" },
-  { numero_persona: "112907", nombre: "Mariana Pérez", puesto: "Asesor Ventas", region: "Noreste", tienda: "6882", curso: "Experiencia del cliente" },
-  { numero_persona: "117236", nombre: "Carlos Medina", puesto: "Cajero", region: "Centro", tienda: "6848", curso: "Prevención de fraudes" },
 ];
 
 const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -79,7 +127,8 @@ function SelectFilter({ label, value, options, onChange }: { label: string; valu
 
 export default function Home() {
   const [categories, setCategories] = useState(fallbackCategories);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(["almacenista"]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [reportQuery, setReportQuery] = useState("");
   const [dashboards, setDashboards] = useState<CategoryDashboard[]>([]);
   const [year, setYear] = useState("2026");
   const [month, setMonth] = useState("7");
@@ -88,35 +137,83 @@ export default function Home() {
   const [positions, setPositions] = useState<string[]>([]);
   const [peopleMode, setPeopleMode] = useState(false);
   const [nameQuery, setNameQuery] = useState("");
-  const [pendingRows, setPendingRows] = useState<PendingRow[]>(fallbackPending);
+  const [pendingRows, setPendingRows] = useState<PendingRow[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [pendingError, setPendingError] = useState("");
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [showAllCourses, setShowAllCourses] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [usingDemo, setUsingDemo] = useState(true);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const librarySearchRef = useRef<HTMLInputElement>(null);
+  const reportScrollRef = useRef<HTMLDivElement>(null);
+  const reportSheetRef = useRef<HTMLElement>(null);
+  const pendingReportScrollRef = useRef<number | null>(null);
   const period = `${year}-${month.padStart(2, "0")}`;
 
   useEffect(() => {
     listCategories()
       .then((items) => {
         if (items.length) {
-          setCategories(items.map(({ key, label }) => ({ key, label })));
-          setSelectedCategories((current) => current.filter((key) => items.some((item) => item.key === key)).length ? current : [items[0].key]);
+          setCategories(items.map(({ key, label, history }) => ({ key, label, history })));
+          setSelectedCategories((current) => current.filter((key) => items.some((item) => item.key === key)));
+          const latestPeriod = items.flatMap((item) => Object.keys(item.history ?? {})).sort().at(-1);
+          if (latestPeriod) {
+            setYear(latestPeriod.slice(0, 4));
+            setMonth(String(Number(latestPeriod.slice(5, 7))));
+          }
         }
       })
       .catch(() => undefined);
   }, []);
 
   useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("es") === "k") {
+        event.preventDefault();
+        librarySearchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
+
+  useEffect(() => {
+    const sheet = reportSheetRef.current;
+    const scroller = reportScrollRef.current;
+    if (!sheet || !scroller || !selectedCategories.length) return;
+    const handleSheetWheel = (event: WheelEvent) => {
+      if (!event.deltaY) return;
+      const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+      const canMoveDown = event.deltaY > 0 && scroller.scrollTop < maxScroll - 1;
+      const canMoveUp = event.deltaY < 0 && scroller.scrollTop > 1;
+      if (!canMoveDown && !canMoveUp) return;
+      event.preventDefault();
+      event.stopPropagation();
+      scroller.scrollTop = Math.max(0, Math.min(maxScroll, scroller.scrollTop + event.deltaY));
+    };
+    sheet.addEventListener("wheel", handleSheetWheel, { passive: false });
+    return () => sheet.removeEventListener("wheel", handleSheetWheel);
+  }, [selectedCategories]);
+
+  useEffect(() => {
+    if (loading || pendingReportScrollRef.current === null) return;
+    const scroller = reportScrollRef.current;
+    if (!scroller) return;
+    const target = pendingReportScrollRef.current;
+    requestAnimationFrame(() => {
+      scroller.scrollTop = Math.min(target, Math.max(0, scroller.scrollHeight - scroller.clientHeight));
+      pendingReportScrollRef.current = null;
+    });
+  }, [loading, selectedCategories]);
+
+  useEffect(() => {
     let active = true;
     if (!selectedCategories.length) {
-      setDashboards([]);
-      setUsingDemo(true);
-      setLoading(false);
       return () => { active = false; };
     }
+    // A period/category change starts a new remote dashboard synchronization.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all(selectedCategories.map((category) => loadCategoryDashboard(category, period)))
       .then((loaded) => {
@@ -134,18 +231,38 @@ export default function Home() {
     return () => { active = false; };
   }, [period, selectedCategories]);
 
-  const sourceMetrics = !selectedCategories.length ? [] : dashboards.length ? dashboards.flatMap((item) => item.metrics) : fallbackMetrics;
+  const activeSurvey = dashboards.length === 1 && dashboards[0].dataKind === "satisfaction" ? dashboards[0] : null;
+  const filteredReports = useMemo(() => {
+    const query = textKey(reportQuery);
+    return query ? categories.filter((category) => {
+      const family = reportFamily(category);
+      return textKey(`${category.label} ${family.label} ${family.description}`).includes(query);
+    }) : categories;
+  }, [categories, reportQuery]);
+  const selectedReportOptions = useMemo(
+    () => categories.filter((item) => selectedCategories.includes(item.key)),
+    [categories, selectedCategories],
+  );
+  const selectedCategory = selectedReportOptions[0] ?? categories[0];
+  const reportIsSurvey = selectedCategory?.key === "encuesta_de_satisfaccion";
+  const sourceMetrics = useMemo<MetricRow[]>(() => !selectedCategories.length
+    ? []
+    : dashboards.filter((item) => item.dataKind !== "satisfaction").flatMap((item) => item.metrics as MetricRow[]),
+  [dashboards, selectedCategories.length]);
   const availablePositions = useMemo(() => [...new Set(sourceMetrics.map((row) => row.puesto))].sort(), [sourceMetrics]);
   const availableRegions = useMemo(() => [...new Set(sourceMetrics.map((row) => row.region))].sort(), [sourceMetrics]);
   const availableCourses = useMemo(() => [...new Set(sourceMetrics.map((row) => row.curso))].sort(), [sourceMetrics]);
-  const filteredMetrics = sourceMetrics.filter((row) =>
+  const filteredMetrics = useMemo(() => sourceMetrics.filter((row) =>
     (!positions.length || positions.includes(row.puesto)) &&
     (region === "all" || row.region === region) &&
     (course === "all" || row.curso === course),
-  );
-  const totals = sumRows(filteredMetrics);
-  const regionalRanking = groupMetrics(filteredMetrics, "region");
-  const courseProgress = groupMetrics(filteredMetrics, "curso");
+  ), [course, positions, region, sourceMetrics]);
+  const { totals, regionalRanking, courseProgress } = useMemo(() => ({
+    totals: sumRows(filteredMetrics),
+    regionalRanking: groupMetrics(filteredMetrics, "region"),
+    courseProgress: groupMetrics(filteredMetrics, "curso"),
+  }), [filteredMetrics]);
+  const hasTrainingData = filteredMetrics.length > 0 && totals.total > 0;
 
   const history = useMemo(() => {
     const grouped = new Map<string, { total: number; completed: number }>();
@@ -159,7 +276,7 @@ export default function Home() {
       label: months[Number(key.slice(5)) - 1]?.slice(0, 3) ?? key,
       value: value.total ? Math.round((value.completed / value.total) * 1000) / 10 : 0,
     }));
-    return real.length ? real : [58, 63, 66, 71, 74, 78].map((value, index) => ({ label: ["Feb", "Mar", "Abr", "May", "Jun", "Jul"][index], value }));
+    return real;
   }, [dashboards, year]);
 
   const resetCategoryFilters = () => {
@@ -171,21 +288,53 @@ export default function Home() {
     setShowAllCourses(false);
   };
 
-  const selectCategory = (key: string) => {
+  const selectCategory = (key: string, combine = false) => {
+    const switchingReport = selectedCategories.length > 0;
+    const clickedCategory = categories.find((item) => item.key === key);
+    if (!clickedCategory) return;
+    const selectedFamily = selectedReportOptions[0] ? reportFamily(selectedReportOptions[0]).label : null;
+    const clickedFamily = reportFamily(clickedCategory).label;
+    let nextSelection: string[];
+    if (!switchingReport) {
+      nextSelection = [key];
+    } else if (!combine) {
+      nextSelection = selectedCategories.length === 1 && selectedCategories[0] === key ? selectedCategories : [key];
+    } else if (selectedFamily !== clickedFamily) {
+      nextSelection = selectedCategories;
+    } else if (selectedCategories.includes(key)) {
+      nextSelection = selectedCategories.length > 1 ? selectedCategories.filter((item) => item !== key) : selectedCategories;
+    } else {
+      nextSelection = [...selectedCategories, key];
+    }
+    if (nextSelection === selectedCategories) return;
+    pendingReportScrollRef.current = switchingReport ? reportScrollRef.current?.scrollTop ?? 0 : null;
+    const nextReports = categories.filter((item) => nextSelection.includes(item.key));
+    const latestPeriod = latestSharedPeriod(nextReports) ?? Object.keys(clickedCategory.history ?? {}).sort().at(-1);
     resetCategoryFilters();
-    setSelectedCategories([key]);
+    setReportQuery("");
+    if (latestPeriod) {
+      setYear(latestPeriod.slice(0, 4));
+      setMonth(String(Number(latestPeriod.slice(5, 7))));
+    }
+    setSelectedCategories(nextSelection);
+    if (!switchingReport) window.scrollTo({ top: 0, behavior: "auto" });
   };
-
-  const addCategoryToSharedView = (key: string) => {
-    setSelectedCategories((current) => current.includes(key) ? current : [...current, key]);
+  const returnToLibrary = () => {
+    resetCategoryFilters();
+    setReportQuery("");
+    setDashboards([]);
+    setUsingDemo(true);
+    setLoading(false);
+    setSelectedCategories([]);
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const togglePosition = (value: string) => {
     setPositions((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
   };
 
-  const loadPeople = async () => {
-    if (!dashboards.length) { setPendingRows(fallbackPending); return; }
+  const loadPeople = useCallback(async () => {
+    if (!dashboards.length) { setPendingRows([]); return; }
     setLoadingPending(true);
     setPendingError("");
     try {
@@ -201,9 +350,14 @@ export default function Home() {
     } finally {
       setLoadingPending(false);
     }
-  };
+  }, [dashboards, positions, region]);
 
-  useEffect(() => { if (peopleMode) void loadPeople(); }, [peopleMode, dashboards, region, positions]);
+  useEffect(() => {
+    if (!peopleMode) return;
+    // Pending rows are derived from the active report filters.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadPeople();
+  }, [peopleMode, loadPeople]);
 
   const visiblePending = pendingRows.filter((row) =>
     (!nameQuery || `${row.nombre} ${row.numero_persona}`.toLocaleLowerCase("es").includes(nameQuery.toLocaleLowerCase("es"))) &&
@@ -212,11 +366,9 @@ export default function Home() {
     (!positions.length || positions.includes(row.puesto)),
   );
 
-  const selectedLabel = !selectedCategories.length
-    ? "Selecciona una categoría"
-    : categories.length > 1 && selectedCategories.length === categories.length
-      ? "Todas las categorías"
-      : categories.filter((item) => selectedCategories.includes(item.key)).map((item) => item.label).join(", ");
+  const selectedLabel = selectedReportOptions.length > 2
+    ? `${selectedReportOptions.length} reportes de ${reportFamily(selectedReportOptions[0]).label}`
+    : selectedReportOptions.map((item) => item.label).join(" + ") || "Selecciona un reporte";
   const syncLabel = loading ? "Sincronizando…" : usingDemo ? "Sin datos" : "Sincronizado";
   const syncTitle = loading
     ? "Consultando Firebase"
@@ -224,67 +376,96 @@ export default function Home() {
       ? "No se encontraron datos publicados para los filtros seleccionados"
       : `Última sincronización: ${lastSyncAt?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) ?? "ahora"}`;
 
+  if (!selectedCategories.length) {
+    return <div className="site-page library-page">
+      <header className="site-header library-header">
+        <UniversityBrand onClick={() => undefined} />
+        <strong className="header-section-title">Reportes</strong>
+        <span className="library-count">{categories.length.toLocaleString("es-MX")} reportes</span>
+      </header>
+      <section className="library-hero">
+        <span>UNIVERSIDAD CORPORATIVA COPPEL</span>
+        <h1>Think different.</h1>
+        <p>Cada reporte es una historia. Elige una portada y entra a leer tus datos.</p>
+        <label className="library-search"><i aria-hidden="true">⌕</i><input ref={librarySearchRef} value={reportQuery} onChange={(event) => setReportQuery(event.target.value)} placeholder="Buscar un reporte" /><kbd>⌘ K</kbd></label>
+      </section>
+      <main className="library-content">
+        <header><div><span>Todos los reportes</span><small>Publicados por la Universidad Corporativa</small></div><b>{filteredReports.length}</b></header>
+        {filteredReports.length ? <div className="book-library-grid">{filteredReports.map((category, index) => {
+          const family = reportFamily(category);
+          return <button className="book-card" key={category.key} onClick={() => selectCategory(category.key)} style={{ animationDelay: `${index * 45}ms` }}>
+            <ReportCover category={category} />
+            <span className="book-card-copy"><span className="report-family-tag">{family.label}</span><strong>{category.label}</strong><small>{family.description}</small></span>
+          </button>;
+        })}</div> : <section className="library-empty"><strong>No encontramos ese reporte.</strong><span>Prueba con otro nombre o con una familia como “Avance” o “Experiencia”.</span></section>}
+      </main>
+      <LibraryFooter />
+    </div>;
+  }
+
   return (
     <div className="site-page">
       <header className="site-header">
-        <strong>DataStore</strong>
-        <nav aria-label="Navegación principal">
-          <button className="active">Reportes</button>
-        </nav>
+        <UniversityBrand onClick={returnToLibrary} />
+        <strong className="header-section-title">{selectedLabel}</strong>
         <span className={`sync-status ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>
           <i /> {syncLabel}
         </span>
       </header>
 
       <section className="page-intro">
+        <button className="report-back-button" onClick={returnToLibrary}>
+          <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 18 9 12l6-6" /></svg></span>
+          Todos los reportes
+        </button>
         <h1>Reportes</h1>
-        <p>Consulta el avance mensual, compara regiones y encuentra cursos pendientes.</p>
+        <p>{reportIsSurvey ? "Explora satisfacción, recomendación y desempeño por programa e instructor." : "Consulta el avance mensual, compara regiones y encuentra cursos pendientes."}</p>
       </section>
 
     <main className="workspace-shell">
       <aside className="filter-rail">
         <header className="rail-heading">
-          <div><span className="eyebrow">BIBLIOTECA</span><h1>Categorías</h1></div>
+          <div><span className="eyebrow">CATÁLOGO</span><h1>Reportes</h1></div>
           <span className={`data-dot ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle} />
         </header>
 
-        <div className="rail-section-title"><span>Categorías</span><small>{selectedCategories.length} {selectedCategories.length === 1 ? "activa" : "activas"}</small></div>
+        <label className="rail-search"><i aria-hidden="true">⌕</i><input value={reportQuery} onChange={(event) => setReportQuery(event.target.value)} placeholder="Buscar reporte" /></label>
+        <div className="rail-section-title"><span>Reportes</span><small>{filteredReports.length}</small></div>
         <nav className="category-list" aria-label="Categorías del reporte">
-          {categories.length > 1 && (
-            <button className={selectedCategories.length === categories.length ? "category active" : "category"} onClick={() => { resetCategoryFilters(); setSelectedCategories((current) => current.length === categories.length ? [] : categories.map((item) => item.key)); }}>
-              <span className="all-icon">•••</span><span>Todas las categorías</span><b>{selectedCategories.length === categories.length ? "✓" : ""}</b>
-            </button>
-          )}
-          {categories.map((category) => (
+          {filteredReports.map((category) => (
             <button
               className={selectedCategories.includes(category.key) ? "category active" : "category"}
               key={category.key}
               onClick={() => selectCategory(category.key)}
-              onContextMenu={(event) => { event.preventDefault(); addCategoryToSharedView(category.key); }}
+              onContextMenu={(event) => { event.preventDefault(); selectCategory(category.key, true); }}
+              aria-pressed={selectedCategories.includes(category.key)}
+              title="Clic izquierdo para cambiar · clic derecho para combinar"
             >
-              <span className="doc-icon"><i /><i /><i /></span><span>{category.label}</span><b>{selectedCategories.includes(category.key) ? "✓" : ""}</b>
+              <ReportCover category={category} compact />
+              <span className="category-copy"><span>{category.label}</span><small>{reportFamily(category).label}</small></span>
             </button>
           ))}
         </nav>
 
       </aside>
 
-      <section className="report-space">
+      <section className="report-space" key={selectedCategories.join("|")}>
         <header className="topbar">
-          <div className="report-name"><span className="mini-doc"><i /><i /><i /></span><span><strong title={selectedLabel}>{selectedLabel}</strong><small>Reporte mensual · {period}</small></span></div>
+          <div className="report-name"><ReportCover category={selectedCategory} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {period}</small></span></div>
           <span className={`status-pill ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>{syncLabel}</span>
         </header>
 
-        <div className="report-scroll">
-          <article className="sheet">
+        <div className="report-scroll" ref={reportScrollRef}>
+          <article className={loading ? "sheet is-loading" : "sheet is-ready"} ref={reportSheetRef}>
             <header className="sheet-title">
-              <div><span className="eyebrow">{peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span><h2>{peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              <div><span className="eyebrow">{reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span><h2>{reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
-            <div className={peopleMode ? "sheet-toolbar people" : "sheet-toolbar"} aria-label="Filtros del reporte">
+            {loading ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
+            {!activeSurvey && <div className="floating-toolbar-frame"><div className={peopleMode ? "sheet-toolbar people" : "sheet-toolbar"} aria-label="Filtros del reporte">
               {peopleMode ? (
                 <>
-                  <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input autoFocus value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>
+                  <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>
                   <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
                   <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
                   <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
@@ -300,9 +481,9 @@ export default function Home() {
                   <button className="toolbar-people" onClick={() => setPeopleMode(true)} aria-label="Buscar colaboradores" title="Buscar colaboradores">◎</button>
                 </>
               )}
-            </div>
+            </div></div>}
 
-            <section className="report-lead">
+            {activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} /> : <><section className="report-lead">
               <h3>{selectedLabel}</h3>
               <p>{peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde RunSQL."}</p>
               <small>{usingDemo ? "Aún no hay datos sincronizados para este periodo. Publica la información desde RunSQL." : `Fecha de corte del periodo ${period}.`}</small>
@@ -311,25 +492,25 @@ export default function Home() {
             {!peopleMode ? (
               <>
                 <section className="metric-grid">
-                  <article><span>Avance total</span><strong>{totals.progress.toFixed(1)}%</strong><small>{totals.completed.toLocaleString("es-MX")} completados</small></article>
-                  <article><span>Total asignado</span><strong>{totals.total.toLocaleString("es-MX")}</strong><small>{filteredMetrics.length.toLocaleString("es-MX")} combinaciones</small></article>
-                  <article><span>Pendientes</span><strong>{totals.pending.toLocaleString("es-MX")}</strong><small>{(100 - totals.progress).toFixed(1)}% del total</small></article>
+                  <article><span>Avance total</span><strong>{hasTrainingData ? `${totals.progress.toFixed(1)}%` : "—"}</strong><small>{hasTrainingData ? `${totals.completed.toLocaleString("es-MX")} completados` : "Sin datos"}</small></article>
+                  <article><span>Total asignado</span><strong>{hasTrainingData ? totals.total.toLocaleString("es-MX") : "—"}</strong><small>{hasTrainingData ? `${filteredMetrics.length.toLocaleString("es-MX")} combinaciones` : "Sin datos"}</small></article>
+                  <article><span>Pendientes</span><strong>{hasTrainingData ? totals.pending.toLocaleString("es-MX") : "—"}</strong><small>{hasTrainingData ? `${(100 - totals.progress).toFixed(1)}% del total` : "Sin datos"}</small></article>
                 </section>
 
                 <section className="dashboard-grid">
                   <article className="panel chart-panel">
-                    <div className="panel-heading"><div><span>Avance mensual</span><small>Comparativo del año</small></div><b>{totals.progress.toFixed(1)}%</b></div>
-                    <div className="bars" aria-label="Gráfica de avance mensual">{history.map((item) => <div className="bar-column" key={item.label}><em>{item.value}%</em><div style={{ height: `${Math.max(item.value, 4)}%` }} /><small>{item.label}</small></div>)}</div>
+                    <div className="panel-heading"><div><span>Avance mensual</span><small>Comparativo del año</small></div><b>{hasTrainingData ? `${totals.progress.toFixed(1)}%` : "—"}</b></div>
+                    {history.length ? <div className="bars" aria-label="Gráfica de avance mensual">{history.map((item) => <div className="bar-column" key={item.label}><em>{item.value}%</em><div style={{ height: `${Math.max(item.value, 4)}%` }} /><small>{item.label}</small></div>)}</div> : <p className="comments-empty">Sin datos para el periodo seleccionado.</p>}
                   </article>
                   <article className="panel ranking-panel">
                     <div className="panel-heading"><div><span>Ranking regional</span><small>Avance promedio</small></div></div>
-                    {regionalRanking.slice(0, 5).map((item, index) => <div className="rank-row" key={item.label}><b>{String(index + 1).padStart(2, "0")}</b><span>{item.label}</span><strong>{item.progress.toFixed(1)}%</strong></div>)}
+                    {regionalRanking.length ? regionalRanking.slice(0, 5).map((item, index) => <div className="rank-row" key={item.label}><b>{String(index + 1).padStart(2, "0")}</b><span>{item.label}</span><strong>{item.progress.toFixed(1)}%</strong></div>) : <p className="comments-empty">Sin datos para los filtros seleccionados.</p>}
                     <div className={showAllRegions ? "expandable-section is-open" : "expandable-section"}><div>{regionalRanking.slice(5).map((item, index) => <div className="rank-row" key={item.label}><b>{String(index + 6).padStart(2, "0")}</b><span>{item.label}</span><strong>{item.progress.toFixed(1)}%</strong></div>)}</div></div>
                     {regionalRanking.length > 5 && <button className="show-more-button" onClick={() => setShowAllRegions((current) => !current)}><span>{showAllRegions ? "Mostrar menos" : `Ver ${regionalRanking.length - 5} más`}</span><span className="more-icon-shell" aria-hidden="true"><i className={showAllRegions ? "more-icon collapse" : "more-icon"} /></span></button>}
                   </article>
                   <article className="panel course-panel">
                     <div className="panel-heading"><div><span>Avance por curso</span><small>Selecciona un curso para filtrar</small></div></div>
-                    <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}<div className={showAllCourses ? "expandable-section is-open" : "expandable-section"}><div>{courseProgress.slice(7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div></div></div>
+                    {courseProgress.length ? <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}<div className={showAllCourses ? "expandable-section is-open" : "expandable-section"}><div>{courseProgress.slice(7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div></div></div> : <p className="comments-empty">Sin datos para los filtros seleccionados.</p>}
                     {courseProgress.length > 7 && <button className="show-more-button" onClick={() => setShowAllCourses((current) => !current)}><span>{showAllCourses ? "Mostrar menos" : `Ver ${courseProgress.length - 7} más`}</span><span className="more-icon-shell" aria-hidden="true"><i className={showAllCourses ? "more-icon collapse" : "more-icon"} /></span></button>}
                   </article>
                 </section>
@@ -339,7 +520,8 @@ export default function Home() {
                 <div className={pendingError ? "people-summary error" : "people-summary"}><span>{loadingPending ? "Cargando colaboradores…" : pendingError || `${visiblePending.length.toLocaleString("es-MX")} pendientes encontrados`}</span><small>{pendingError ? "Verifica que el backend local de RunSQL esté encendido." : "La búsqueda utiliza únicamente los bloques de las secciones elegidas."}</small></div>
                 <div className="people-table"><div className="people-table-head"><span>Colaborador</span><span>Puesto</span><span>Región</span><span>Curso pendiente</span></div>{visiblePending.slice(0, 100).map((person, index) => <div className="person-row" key={`${person.numero_persona}-${person.curso}-${index}`}><span><b>{person.nombre}</b><small>{person.numero_persona} · Tienda {person.tienda ?? "—"}</small></span><span>{person.puesto}</span><span>{person.region}</span><span>{person.curso}</span></div>)}</div>
               </section>
-            )}
+            )}</>}
+            </div>}
           </article>
         </div>
       </section>

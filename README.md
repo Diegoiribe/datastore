@@ -16,6 +16,15 @@ en Cloud Firestore.
 - Caché durante la sesión para evitar repetir lecturas de Firestore.
 - Datos de demostración cuando Firebase todavía no tiene publicaciones o no
   permite la lectura.
+- Reporte unificado de satisfacción con filtros por periodo, programa, curso,
+  instructor y región.
+- ISA, NPS provisional, volumen de encuestas, tendencia, rubros, ranking de
+  instructores, comparativo de programas y comentarios agrupados por tema y
+  tono.
+- Modo de instructores con búsqueda, selección múltiple y lectura de fortalezas
+  y oportunidades.
+- Consolidación visual de nombres de instructor equivalentes por mayúsculas y
+  acentos.
 
 ## Iniciar el proyecto
 

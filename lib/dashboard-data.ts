@@ -8,6 +8,49 @@ export type MetricRow = {
   avance: number;
 };
 
+export type SatisfactionMetricRow = {
+  mes: string;
+  programa: string;
+  curso: string;
+  instructor: string;
+  region: string;
+  respuestas: number;
+  dominio_suma: number;
+  dominio_n: number;
+  comunicacion_suma: number;
+  comunicacion_n: number;
+  interes_suma: number;
+  interes_n: number;
+  participacion_suma: number;
+  participacion_n: number;
+  resolucion_suma: number;
+  resolucion_n: number;
+  nps_validas: number;
+  promotores: number;
+  pasivos: number;
+  detractores: number;
+  respuestas_cinco: number;
+  nps_maximas?: number;
+  primera_respuesta: string;
+  ultima_respuesta: string;
+};
+
+export type SatisfactionComment = {
+  record_type: "comment" | "theme";
+  fecha: string | null;
+  mes: string;
+  programa: string;
+  curso: string;
+  instructor: string;
+  region: string;
+  recomendacion: number | null;
+  sentiment: "positive" | "negative" | "neutral";
+  theme: string;
+  count: number;
+  comentario: string | null;
+  example: string;
+};
+
 export type PendingRow = {
   numero_persona: string;
   nombre: string;
@@ -40,16 +83,25 @@ export type CategoryDashboard = {
   label: string;
   period: string;
   cutoffDate: string;
-  metrics: MetricRow[];
+  metrics: Array<MetricRow | SatisfactionMetricRow>;
   positions: string[];
   regions: string[];
   courses: string[];
   pendingSections: PendingSection[];
   history: Record<string, PeriodSummary>;
+  dataKind: "training" | "satisfaction";
+  programs: string[];
+  instructors: string[];
+  responseCount: number;
+  isa: number;
+  nps: number;
+  scoreFiveResponses: number;
+  npsScaleStatus: string;
 };
 
 const dashboardCache = new Map<string, Promise<CategoryDashboard>>();
 const pendingDashboardCache = new Map<string, Promise<PendingRow[]>>();
+const detailDashboardCache = new Map<string, Promise<SatisfactionComment[]>>();
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_RUNSQL_API_URL ?? "http://localhost:8000"
 ).replace(/\/$/, "");
@@ -116,4 +168,18 @@ async function fetchPendingDashboard(dashboard: CategoryDashboard) {
   return requestJson<PendingRow[]>(
     `/api/dashboard/${encodeURIComponent(dashboard.period)}/${encodeURIComponent(dashboard.category)}/pending`,
   );
+}
+
+export function loadDashboardDetails(dashboard: CategoryDashboard) {
+  const cacheKey = `${dashboard.category}/${dashboard.period}`;
+  if (!detailDashboardCache.has(cacheKey)) {
+    const request = requestJson<SatisfactionComment[]>(
+      `/api/dashboard/${encodeURIComponent(dashboard.period)}/${encodeURIComponent(dashboard.category)}/details`,
+    ).catch((error) => {
+      detailDashboardCache.delete(cacheKey);
+      throw error;
+    });
+    detailDashboardCache.set(cacheKey, request);
+  }
+  return detailDashboardCache.get(cacheKey)!;
 }

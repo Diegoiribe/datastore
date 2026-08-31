@@ -12,12 +12,13 @@ async function render() {
   );
 }
 
-test("renders the DataStore dashboard", async () => {
+test("renders the DataStore report library", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /<title>DataStore · Capacitación<\/title>/i);
-  assert.match(html, /Reporte de capacitación/);
-  assert.match(html, /Buscar colaboradores/);
+  assert.match(html, /Todos los reportes/);
+  assert.match(html, /Buscar un reporte/);
+  assert.match(html, /Universidad Corporativa Coppel/);
   assert.doesNotMatch(html, /codex-preview/);
 });
