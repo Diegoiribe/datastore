@@ -575,7 +575,20 @@ export default function Home() {
       <section className="report-space" key={selectedCategories.join("|")}>
         <header className="topbar">
           <div className="report-name"><ReportCover category={selectedCategory} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {tiendaPeriodReady ? period : "Selecciona periodo"}</small></span></div>
-          <span className={`status-pill ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>{syncLabel}</span>
+          <div className="topbar-actions">
+            <span className={`status-pill ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>{syncLabel}</span>
+            <button
+              type="button"
+              className="download-report-button"
+              style={openBook === "tienda" ? { "--download-color": tiendaAccent.action } as CSSProperties : undefined}
+              onClick={() => window.print()}
+              aria-label="Descargar reporte en PDF"
+              title="Descargar reporte en PDF"
+            >
+              <span className="download-icon" aria-hidden="true" />
+              <span>Descargar</span>
+            </button>
+          </div>
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
