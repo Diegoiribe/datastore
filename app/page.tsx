@@ -19,11 +19,11 @@ const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerent
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const tiendaAccentOptions = [
   { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 33%, #1C42E8 33% 66%, #081754 66% 100%)" },
-  { key: "blue", label: "Azul", accent: "#1C42E8", secondary: "#F0D224", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #1C42E8 0 45%, #F0D224 45% 72%, #081754 72% 100%)" },
-  { key: "deep", label: "Profunda", accent: "#081754", secondary: "#1C42E8", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #081754 0 42%, #1C42E8 42% 74%, #F0D224 74% 100%)" },
-  { key: "sky", label: "Cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #1CA8F7 0 42%, #1C42E8 42% 74%, #F0D224 74% 100%)" },
+  { key: "institutional_light", label: "Institucional clara", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 50%, #1C42E8 50% 76%, #081754 76% 100%)" },
+  { key: "institutional_blue", label: "Institucional azul", accent: "#1C42E8", secondary: "#F0D224", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 26%, #1C42E8 26% 70%, #081754 70% 100%)" },
+  { key: "institutional_sky", label: "Institucional cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 28%, #1CA8F7 28% 62%, #1C42E8 62% 100%)" },
   { key: "solar", label: "Solar", accent: "#F0D224", secondary: "#081754", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #F0D224 0 46%, #081754 46% 76%, #1CA8F7 76% 100%)" },
-  { key: "editorial", label: "Editorial", accent: "#1C42E8", secondary: "#1CA8F7", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #1C42E8 0 42%, #1CA8F7 42% 72%, #081754 72% 100%)" },
+  { key: "solar_blue", label: "Solar azul", accent: "#1C42E8", secondary: "#F0D224", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #F0D224 0 38%, #081754 38% 66%, #1C42E8 66% 100%)" },
 ];
 
 function textKey(value: string) {
