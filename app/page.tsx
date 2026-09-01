@@ -571,7 +571,7 @@ export default function Home() {
         <div className="report-scroll" ref={reportScrollRef}>
           <article className={loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"} ref={reportSheetRef}>
             <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"}>
-              {openBook === "tienda" && <div className="tienda-letterhead-logo"><img src="/academia-ventas-logo.png" alt="Universidad Corporativa Coppel" /></div>}
+              {openBook === "tienda" && <div className="tienda-letterhead-logo"><img className="logo-ink" src="/academia-ventas-logo.png" alt="Universidad Corporativa Coppel" /><img className="logo-accent" src="/academia-ventas-logo.png" alt="" aria-hidden="true" /></div>}
               <div className="sheet-title-copy"><span className="eyebrow">{reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
