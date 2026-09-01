@@ -29,7 +29,7 @@ const collectionTabColors = ["#f4cb63", "#f2a895", "#b9dcae", "#9ec9eb", "#c8b7d
 const tiendaAccentOptions = [
   { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 33%, #1C42E8 33% 66%, #081754 66% 100%)" },
   { key: "institutional_light", label: "Institucional clara", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 50%, #1C42E8 50% 76%, #081754 76% 100%)" },
-  { key: "institutional_blue", label: "Institucional azul", accent: "#1C42E8", secondary: "#F0D224", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 26%, #1C42E8 26% 70%, #081754 70% 100%)" },
+  { key: "monochrome", label: "Monocromática", accent: "#1D1D1F", secondary: "#8E8E93", deep: "#000000", action: "#3A3A3C", swatch: "linear-gradient(90deg, #111113 0 38%, #8E8E93 38% 68%, #F4F4F6 68% 100%)" },
   { key: "institutional_sky", label: "Institucional cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 28%, #1CA8F7 28% 62%, #1C42E8 62% 100%)" },
   { key: "solar", label: "Solar", accent: "#F0D224", secondary: "#081754", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #F0D224 0 46%, #081754 46% 76%, #1CA8F7 76% 100%)" },
   { key: "solar_blue", label: "Solar azul", accent: "#1C42E8", secondary: "#F0D224", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #F0D224 0 38%, #081754 38% 66%, #1C42E8 66% 100%)" },
@@ -92,6 +92,30 @@ function CollectionBookCover({ category, chapters, compact = false }: { category
       {chapters.map((chapter, index) => <i key={chapter.key} style={{ "--tab-color": collectionTabColors[index % collectionTabColors.length] } as CSSProperties}>{String(index + 1).padStart(2, "0")}</i>)}
     </span>
   </span>;
+}
+
+function AccentPicker({ value, open, onOpenChange, onChange, label }: {
+  value: (typeof tiendaAccentOptions)[number];
+  open: boolean;
+  onOpenChange(open: boolean): void;
+  onChange(value: (typeof tiendaAccentOptions)[number]): void;
+  label: string;
+}) {
+  return <div className={open ? "tienda-accent-picker is-open" : "tienda-accent-picker"}>
+    <div className="accent-options" aria-hidden={!open}>
+      <div>{tiendaAccentOptions.map((option) => <button
+        type="button"
+        key={option.key}
+        className={option.key === value.key ? "accent-swatch is-selected" : "accent-swatch"}
+        style={{ background: option.swatch }}
+        aria-label={`Usar paleta ${option.label}`}
+        aria-pressed={option.key === value.key}
+        disabled={!open}
+        onClick={() => { onChange(option); onOpenChange(false); }}
+      />)}</div>
+    </div>
+    <button type="button" className="accent-swatch accent-toggle" style={{ background: value.swatch }} aria-label={label} aria-expanded={open} onClick={() => onOpenChange(true)} />
+  </div>;
 }
 
 function LibraryFooter() {
@@ -209,6 +233,8 @@ export default function Home() {
   const [showAllCourses, setShowAllCourses] = useState(false);
   const [tiendaAccent, setTiendaAccent] = useState(tiendaAccentOptions[0]);
   const [accentPickerOpen, setAccentPickerOpen] = useState(false);
+  const [surveyAccent, setSurveyAccent] = useState(tiendaAccentOptions[2]);
+  const [surveyAccentPickerOpen, setSurveyAccentPickerOpen] = useState(false);
   const [readerMode, setReaderMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [usingDemo, setUsingDemo] = useState(true);
@@ -646,34 +672,14 @@ export default function Home() {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent, "--tienda-secondary": tiendaAccent.secondary, "--tienda-deep": tiendaAccent.deep, "--tienda-action": tiendaAccent.action } as CSSProperties : undefined}>
+          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent, "--tienda-secondary": tiendaAccent.secondary, "--tienda-deep": tiendaAccent.deep, "--tienda-action": tiendaAccent.action } as CSSProperties : activeSurvey ? { "--survey-accent": surveyAccent.accent, "--survey-secondary": surveyAccent.secondary, "--survey-deep": surveyAccent.deep, "--survey-action": surveyAccent.action } as CSSProperties : undefined}>
             <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
-                <div className={accentPickerOpen ? "tienda-accent-picker is-open" : "tienda-accent-picker"}>
-                  <div className="accent-options" aria-hidden={!accentPickerOpen}>
-                    <div>{tiendaAccentOptions.map((option) => <button
-                      type="button"
-                      key={option.key}
-                      className={option.key === tiendaAccent.key ? "accent-swatch is-selected" : "accent-swatch"}
-                      style={{ background: option.swatch }}
-                      aria-label={`Usar color ${option.label}`}
-                      aria-pressed={option.key === tiendaAccent.key}
-                      disabled={!accentPickerOpen}
-                      onClick={() => { setTiendaAccent(option); setAccentPickerOpen(false); }}
-                    />)}</div>
-                  </div>
-                  <button
-                    type="button"
-                    className="accent-swatch accent-toggle"
-                    style={{ background: tiendaAccent.swatch }}
-                    aria-label="Mostrar colores del membrete"
-                    aria-expanded={accentPickerOpen}
-                    onClick={() => setAccentPickerOpen(true)}
-                  />
-                </div>
+                <AccentPicker value={tiendaAccent} open={accentPickerOpen} onOpenChange={setAccentPickerOpen} onChange={setTiendaAccent} label="Mostrar paletas del membrete" />
               </div>}
               <div className="sheet-title-copy"><span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              {activeSurvey && <AccentPicker value={surveyAccent} open={surveyAccentPickerOpen} onOpenChange={setSurveyAccentPickerOpen} onChange={setSurveyAccent} label="Mostrar paletas de la encuesta" />}
             </header>
 
             {loading && tiendaPeriodReady ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
