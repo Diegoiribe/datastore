@@ -580,13 +580,11 @@ export default function Home() {
             <button
               type="button"
               className="download-report-button"
-              style={openBook === "tienda" ? { "--download-color": tiendaAccent.action } as CSSProperties : undefined}
               onClick={() => window.print()}
               aria-label="Descargar reporte en PDF"
               title="Descargar reporte en PDF"
             >
-              <span className="download-icon" aria-hidden="true" />
-              <span>Descargar</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 19h14" /></svg>
             </button>
           </div>
         </header>
