@@ -306,7 +306,7 @@ html, body { background: #fff; }
 .coppel-dots { position: absolute; top: 0; left: 10px; display: flex; align-items: center; gap: 3px; }
 .coppel-dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: #f8d31c; }
 .coppel-dots i:first-child { width: 10px; height: 10px; }
-.brand-divider { width: 1px; height: 44px; display: block; align-self: end; background: #1d1d1f; }
+.brand-divider { width: 1px; height: 27px; display: block; align-self: end; background: #1d1d1f; }
 .sales-academy-name { display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 1px; font-size: 15px; line-height: 1.05; letter-spacing: -.035em; white-space: nowrap; }
 .tienda-accent-picker { position: relative; z-index: 3; width: 30px; height: 30px; flex: 0 0 30px; margin: 0; }
 .accent-options { position: absolute; top: 0; right: 0; width: 30px; height: 30px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: 0 6px 18px rgba(39, 28, 31, .09); pointer-events: none; transition: width .36s cubic-bezier(.22, .78, .22, 1), box-shadow .24s ease; }
@@ -322,6 +322,9 @@ html, body { background: #fff; }
 .tienda-letterhead .sheet-title-copy { position: relative; min-width: 0; margin: 0; padding: 0; container-type: inline-size; }
 .tienda-letterhead .sheet-title-copy::before { position: absolute; top: -6px; bottom: -6px; left: -24px; width: 4px; background: var(--tienda-accent, #f8d31c); content: ""; transition: background .24s ease; }
 .tienda-letterhead .sheet-title-copy h2 { max-width: none; font-size: clamp(22px, 6.15cqi, 42px); letter-spacing: -.055em; white-space: nowrap; }
+.sheet.tienda-themed .metric-grid strong, .sheet.tienda-themed .panel-heading b { color: var(--tienda-deep, #081754); }
+.sheet.tienda-themed .bar-column div { background: linear-gradient(180deg, var(--tienda-secondary, #1C42E8), var(--tienda-accent, #F0D224)); }
+.sheet.tienda-themed .course-table button > i b { background: var(--tienda-secondary, #1C42E8); }
 .tienda-confidentiality { margin-top: 92px; padding: 24px 0 2px; border-top: 1px solid #d8d8dd; color: #77777d; font-size: 8px; font-weight: 520; line-height: 1.65; }
 .tienda-confidentiality strong { font-weight: 650; }
 .sheet-toolbar {
@@ -486,7 +489,7 @@ html, body { background: #fff; }
   .tienda-letterhead-logo { width: min(235px, 76%); height: 56px; gap: 8px; }
   .coppel-brand-block { font-size: 11px; }
   .coppel-brand-block strong { font-size: 14px; }
-  .brand-divider { height: 38px; }
+  .brand-divider { height: 24px; }
   .sales-academy-name { font-size: 13px; }
   .tienda-accent-picker { width: 26px; height: 26px; flex-basis: 26px; }
   .accent-options { width: 26px; height: 26px; }

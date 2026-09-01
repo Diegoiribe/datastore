@@ -18,12 +18,12 @@ type CategoryOption = { key: string; label: string; history?: Record<string, Per
 const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerente_zona"];
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const tiendaAccentOptions = [
-  { key: "sunset", label: "Atardecer", accent: "#ff8da1", swatch: "linear-gradient(135deg, #ff7fb2, #ffc18a)" },
-  { key: "rose", label: "Rosa", accent: "#f277a5", swatch: "linear-gradient(135deg, #f66ead, #ffb092)" },
-  { key: "yellow", label: "Amarillo", accent: "#f8d31c", swatch: "linear-gradient(135deg, #ffd928, #ffc837)" },
-  { key: "orange", label: "Naranja", accent: "#f3a15e", swatch: "linear-gradient(135deg, #c9b08b, #ff9b6c)" },
-  { key: "blush", label: "Rubor", accent: "#d98791", swatch: "linear-gradient(135deg, #9c7b7f, #ffaaa5)" },
-  { key: "peach", label: "Durazno", accent: "#ff9e9e", swatch: "linear-gradient(135deg, #ffb47f, #f8a0cf)" },
+  { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", swatch: "linear-gradient(90deg, #F0D224, #1C42E8 55%, #081754)" },
+  { key: "sky", label: "Cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", swatch: "linear-gradient(90deg, #1CA8F7, #1C42E8 55%, #081754)" },
+  { key: "nature", label: "Naturaleza", accent: "#F0D224", secondary: "#0ABF4F", deep: "#005E3E", swatch: "linear-gradient(90deg, #F0D224, #0ABF4F 55%, #005E3E)" },
+  { key: "creative", label: "Creativa", accent: "#FDA1FB", secondary: "#7D42FF", deep: "#4C04B2", swatch: "linear-gradient(90deg, #FDA1FB, #7D42FF 55%, #4C04B2)" },
+  { key: "warm", label: "Cálida", accent: "#F0D224", secondary: "#FFAE43", deep: "#FF594D", swatch: "linear-gradient(90deg, #F0D224, #FFAE43 55%, #FF594D)" },
+  { key: "earth", label: "Tierra", accent: "#B99B7B", secondary: "#EEE8E3", deep: "#66451D", swatch: "linear-gradient(90deg, #EEE8E3, #B99B7B 55%, #66451D)" },
 ];
 
 function textKey(value: string) {
@@ -193,7 +193,7 @@ export default function Home() {
   const [pendingError, setPendingError] = useState("");
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [showAllCourses, setShowAllCourses] = useState(false);
-  const [tiendaAccent, setTiendaAccent] = useState(tiendaAccentOptions[2]);
+  const [tiendaAccent, setTiendaAccent] = useState(tiendaAccentOptions[0]);
   const [accentPickerOpen, setAccentPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [usingDemo, setUsingDemo] = useState(true);
@@ -579,8 +579,8 @@ export default function Home() {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"} ref={reportSheetRef}>
-            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent } as CSSProperties : undefined}>
+          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent, "--tienda-secondary": tiendaAccent.secondary, "--tienda-deep": tiendaAccent.deep } as CSSProperties : undefined}>
+            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo" role="img" aria-label="Coppel Universidad Corporativa · Academia de Ventas">
                   <div className="coppel-brand-block">
