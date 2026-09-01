@@ -18,12 +18,12 @@ type CategoryOption = { key: string; label: string; history?: Record<string, Per
 const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerente_zona"];
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const tiendaAccentOptions = [
-  { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224, #1C42E8 55%, #081754)" },
-  { key: "sky", label: "Cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #1CA8F7, #1C42E8 55%, #081754)" },
-  { key: "nature", label: "Naturaleza", accent: "#88FF4D", secondary: "#0ABF4F", deep: "#005E3E", action: "#005E3E", swatch: "linear-gradient(90deg, #88FF4D, #0ABF4F 55%, #005E3E)" },
-  { key: "creative", label: "Creativa", accent: "#FDA1FB", secondary: "#7D42FF", deep: "#4C04B2", action: "#4C04B2", swatch: "linear-gradient(90deg, #FDA1FB, #7D42FF 55%, #4C04B2)" },
-  { key: "warm", label: "Cálida", accent: "#FFAE43", secondary: "#FF594D", deep: "#7A2627", action: "#7A2627", swatch: "linear-gradient(90deg, #FFAE43, #FF594D 55%, #7A2627)" },
-  { key: "earth", label: "Tierra", accent: "#EEE8E3", secondary: "#B99B7B", deep: "#66451D", action: "#66451D", swatch: "linear-gradient(90deg, #EEE8E3, #B99B7B 55%, #66451D)" },
+  { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 33%, #1C42E8 33% 66%, #081754 66% 100%)" },
+  { key: "sky", label: "Cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #1CA8F7 0 33%, #1C42E8 33% 66%, #081754 66% 100%)" },
+  { key: "sun", label: "Solar", accent: "#FFAE43", secondary: "#F0D224", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #FFAE43 0 33%, #F0D224 33% 66%, #1C42E8 66% 100%)" },
+  { key: "fresh", label: "Fresca", accent: "#0ABF4F", secondary: "#1C42E8", deep: "#081754", action: "#005E3E", swatch: "linear-gradient(90deg, #0ABF4F 0 33%, #1C42E8 33% 66%, #F0D224 66% 100%)" },
+  { key: "creative", label: "Creativa", accent: "#7D42FF", secondary: "#1C42E8", deep: "#081754", action: "#4C04B2", swatch: "linear-gradient(90deg, #7D42FF 0 33%, #1C42E8 33% 66%, #F0D224 66% 100%)" },
+  { key: "warm", label: "Cálida", accent: "#FF594D", secondary: "#1C42E8", deep: "#081754", action: "#7A2627", swatch: "linear-gradient(90deg, #FF594D 0 33%, #F0D224 33% 66%, #1C42E8 66% 100%)" },
 ];
 
 function textKey(value: string) {
