@@ -98,6 +98,7 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
   const [month, setMonth] = useState("all");
   const [program, setProgram] = useState("");
   const [region, setRegion] = useState("all");
+  const [regionChosen, setRegionChosen] = useState(false);
   const [instructorMode, setInstructorMode] = useState(false);
   const [selectedInstructorKeys, setSelectedInstructorKeys] = useState<string[]>([]);
   const [instructorSearch, setInstructorSearch] = useState("");
@@ -198,7 +199,7 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
 
   const toggleInstructor = (key: string) => setSelectedInstructorKeys((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
   const addInstructor = (key: string) => { setSelectedInstructorKeys((current) => current.includes(key) ? current : [...current, key]); setInstructorSearch(""); setInstructorSearchOpen(false); };
-  const closeInstructorMode = () => { setInstructorMode(false); setProgram(""); setSelectedInstructorKeys([]); setInstructorSearch(""); setInstructorSearchOpen(false); setCommentTone("all"); };
+  const closeInstructorMode = () => { setInstructorMode(false); setProgram(""); setRegion("all"); setRegionChosen(false); setSelectedInstructorKeys([]); setInstructorSearch(""); setInstructorSearchOpen(false); setCommentTone("all"); };
   const programHistoryRows = (label: string) => rows.filter((row) => row.programa === label && (year === "all" || row.mes.startsWith(year)) && (region === "all" || row.region === region) && (!selectedPeriod || row.mes <= selectedPeriod) && (!selectedInstructorKeys.length || selectedInstructorKeys.includes(instructorKey(row.instructor))));
   const programHistoryDetails = (label: string) => comments.filter((item) => item.programa === label && (year === "all" || item.mes.startsWith(year)) && (region === "all" || item.region === region) && (!selectedPeriod || item.mes <= selectedPeriod) && (!selectedInstructorKeys.length || selectedInstructorKeys.includes(instructorKey(item.instructor))));
 
@@ -257,11 +258,11 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
         </div>
         <button className="toolbar-people active" onClick={closeInstructorMode} aria-label="Volver al reporte" title="Volver al reporte"><span className="close-icon" aria-hidden="true" /></button>
       </> : <>
-        <PopupFilter label="Año" value={year === "all" ? undefined : year} options={years.map((value) => ({ value, label: value }))} open={openFilterMenu === "year"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "year" : current === "year" ? null : current)} onChange={(value) => { setYear(value); setMonth("all"); setProgram(""); setExpandedProgram(null); }} />
+        <PopupFilter label="Año" value={year === "all" ? undefined : year} options={years.map((value) => ({ value, label: value }))} open={openFilterMenu === "year"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "year" : current === "year" ? null : current)} onChange={(value) => { setYear(value); setMonth("all"); setProgram(""); setRegion("all"); setRegionChosen(false); setExpandedProgram(null); }} />
         <PopupFilter label="Mes" className="month-filter" value={month === "all" ? undefined : month} options={monthOptions} open={openFilterMenu === "month"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "month" : current === "month" ? null : current)} onChange={setMonth} />
         <PopupFilter label="Programa" className="program-filter" value={program || undefined} options={[{ value: "all", label: "Todos" }, ...unique(rows, "programa").map((value) => ({ value, label: value }))]} open={openFilterMenu === "program"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "program" : current === "program" ? null : current)} onChange={(value) => { setProgram(value); setExpandedProgram(value === "all" ? null : value); }} />
-        <PopupFilter label="Región" className="region-filter" value={region} options={[{ value: "all", label: "Todos" }, ...unique(rows, "region").map((value) => ({ value, label: value }))]} open={openFilterMenu === "region"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "region" : current === "region" ? null : current)} onChange={setRegion} />
-        <button className="toolbar-people" disabled={!periodReady} onClick={() => { setProgram("all"); setRegion("all"); setExpandedProgram(null); setOpenFilterMenu(null); setInstructorMode(true); }} aria-label="Analizar instructores" title={periodReady ? "Analizar instructores" : "Selecciona año y mes primero"}>◎</button>
+        <PopupFilter label="Región" className="region-filter" value={regionChosen ? region : undefined} options={[{ value: "all", label: "Todos" }, ...unique(rows, "region").map((value) => ({ value, label: value }))]} open={openFilterMenu === "region"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "region" : current === "region" ? null : current)} onChange={(value) => { setRegionChosen(true); setRegion(value); }} />
+        <button className="toolbar-people" disabled={!periodReady} onClick={() => { setProgram("all"); setRegion("all"); setRegionChosen(false); setExpandedProgram(null); setOpenFilterMenu(null); setInstructorMode(true); }} aria-label="Analizar instructores" title={periodReady ? "Analizar instructores" : "Selecciona año y mes primero"}>◎</button>
       </>}
     </div></div>
 

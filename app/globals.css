@@ -407,9 +407,9 @@ html, body { background: #fff; }
 .toolbar-popup-filter.month-filter .toolbar-popup-options { max-height: none; }
 .toolbar-popup-filter.month-filter .toolbar-popup-scroll { max-height: none; }
 .toolbar-popup-filter.month-filter .toolbar-popup-options button { height: 36px; min-height: 36px; padding-block: 0; }
-.toolbar-popup-filter:is(.program-filter, .region-filter, .course-filter) .toolbar-popup-options { width: min(310px, calc(100vw - 44px)); max-height: 282px; }
+.toolbar-popup-filter:is(.program-filter, .region-filter, .course-filter) .toolbar-popup-options { width: min(330px, calc(100vw - 44px)); max-height: min(422px, calc(100vh - 170px)); }
 .toolbar-popup-filter:is(.region-filter, .course-filter) .toolbar-popup-options { right: 0; left: auto; }
-.toolbar-popup-filter:is(.program-filter, .region-filter, .course-filter) .toolbar-popup-scroll { max-height: 280px; padding: 10px; scroll-padding-block: 10px; }
+.toolbar-popup-filter:is(.program-filter, .region-filter, .course-filter) .toolbar-popup-scroll { max-height: min(420px, calc(100vh - 172px)); padding: 12px; scroll-padding-block: 12px; }
 .toolbar-popup-filter:is(.program-filter, .region-filter, .course-filter) .toolbar-popup-options button { min-height: 40px; }
 .toolbar-popup-filter:is(.program-filter, .region-filter, .course-filter) .toolbar-popup-options button span { overflow: visible; line-height: 1.25; text-overflow: clip; white-space: normal; }
 .toolbar-popup-scroll::-webkit-scrollbar { display: none; }

@@ -183,6 +183,8 @@ export default function Home() {
   const [positions, setPositions] = useState<string[]>([]);
   const [yearFilterChosen, setYearFilterChosen] = useState(false);
   const [monthFilterChosen, setMonthFilterChosen] = useState(false);
+  const [regionFilterChosen, setRegionFilterChosen] = useState(false);
+  const [courseFilterChosen, setCourseFilterChosen] = useState(false);
   const [positionMenuOpen, setPositionMenuOpen] = useState(false);
   const [openFilterMenu, setOpenFilterMenu] = useState<string | null>(null);
   const [peopleMode, setPeopleMode] = useState(false);
@@ -353,6 +355,8 @@ export default function Home() {
     setNameQuery("");
     setYearFilterChosen(false);
     setMonthFilterChosen(false);
+    setRegionFilterChosen(false);
+    setCourseFilterChosen(false);
     setPositionMenuOpen(false);
     setOpenFilterMenu(null);
     setPeopleSearchOpen(false);
@@ -426,6 +430,8 @@ export default function Home() {
     setPositions([]);
     setRegion("all");
     setCourse("all");
+    setRegionFilterChosen(false);
+    setCourseFilterChosen(false);
     setNameQuery("");
     setPositionMenuOpen(false);
     setOpenFilterMenu(null);
@@ -632,8 +638,8 @@ export default function Home() {
                   </div> : <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>}
                   {openBook === "tienda" ? <>
                     <PositionFilterMenu open={positionMenuOpen} positions={positions} options={availablePositions} onOpenChange={(open) => { setPositionMenuOpen(open); if (open) setOpenFilterMenu(null); }} onToggle={togglePosition} />
-                    <PopupFilter label="Región" className="region-filter" value={region} options={[{ value: "all", label: "Todos" }, ...availableRegions.map((item) => ({ value: item, label: item }))]} open={openFilterMenu === "people-region"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "people-region" : current === "people-region" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={setRegion} />
-                    <PopupFilter label="Cursos" className="course-filter" value={course} options={[{ value: "all", label: "Todos" }, ...availableCourses.map((item) => ({ value: item, label: item }))]} open={openFilterMenu === "people-course"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "people-course" : current === "people-course" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={setCourse} />
+                    <PopupFilter label="Región" className="region-filter" value={regionFilterChosen ? region : undefined} options={[{ value: "all", label: "Todos" }, ...availableRegions.map((item) => ({ value: item, label: item }))]} open={openFilterMenu === "people-region"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "people-region" : current === "people-region" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setRegionFilterChosen(true); setRegion(value); }} />
+                    <PopupFilter label="Cursos" className="course-filter" value={courseFilterChosen ? course : undefined} options={[{ value: "all", label: "Todos" }, ...availableCourses.map((item) => ({ value: item, label: item }))]} open={openFilterMenu === "people-course"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "people-course" : current === "people-course" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setCourseFilterChosen(true); setCourse(value); }} />
                   </> : <>
                     <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
                     <SelectFilter label="Región" allLabel="Todos" value={region} options={availableRegions} onChange={setRegion} />
@@ -647,8 +653,8 @@ export default function Home() {
                     <PopupFilter label="Año" value={yearFilterChosen ? year : undefined} options={[{ value: "2026", label: "2026" }]} open={openFilterMenu === "year"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "year" : current === "year" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setYearFilterChosen(true); setYear(value); }} />
                     <PopupFilter label="Mes" className="month-filter" value={monthFilterChosen ? month : undefined} options={months.map((item, index) => ({ value: String(index + 1), label: item }))} open={openFilterMenu === "month"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "month" : current === "month" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setMonthFilterChosen(true); setMonth(value); }} />
                     <PositionFilterMenu open={positionMenuOpen} positions={positions} options={availablePositions} onOpenChange={(open) => { setPositionMenuOpen(open); if (open) setOpenFilterMenu(null); }} onToggle={togglePosition} />
-                    <PopupFilter label="Región" className="region-filter" value={region} options={[{ value: "all", label: "Todos" }, ...availableRegions.map((item) => ({ value: item, label: item }))]} open={openFilterMenu === "region"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "region" : current === "region" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={setRegion} />
-                    <PopupFilter label="Cursos" className="course-filter" value={course} options={[{ value: "all", label: "Todos" }, ...availableCourses.map((item) => ({ value: item, label: item }))]} open={openFilterMenu === "course"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "course" : current === "course" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={setCourse} />
+                    <PopupFilter label="Región" className="region-filter" value={regionFilterChosen ? region : undefined} options={[{ value: "all", label: "Todos" }, ...availableRegions.map((item) => ({ value: item, label: item }))]} open={openFilterMenu === "region"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "region" : current === "region" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setRegionFilterChosen(true); setRegion(value); }} />
+                    <PopupFilter label="Cursos" className="course-filter" value={courseFilterChosen ? course : undefined} options={[{ value: "all", label: "Todos" }, ...availableCourses.map((item) => ({ value: item, label: item }))]} open={openFilterMenu === "course"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "course" : current === "course" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setCourseFilterChosen(true); setCourse(value); }} />
                   </> : <>
                     <label><span>Año</span><select value={year} onChange={(event) => setYear(event.target.value)}><option value="2026">2026</option></select></label>
                     <label><span>Mes</span><select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item, index) => <option value={String(index + 1)} key={item}>{item}</option>)}</select></label>
@@ -688,7 +694,7 @@ export default function Home() {
                   </article>
                   <article className="panel course-panel">
                     <div className="panel-heading"><div><span>Avance por curso</span><small>Selecciona un curso para filtrar</small></div></div>
-                    {courseProgress.length ? <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}<div className={showAllCourses ? "expandable-section is-open" : "expandable-section"}><div>{courseProgress.slice(7).map((item) => <button key={item.label} onClick={() => setCourse(item.label)}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div></div></div> : <p className="comments-empty">Sin datos para los filtros seleccionados.</p>}
+                    {courseProgress.length ? <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button key={item.label} onClick={() => { setCourseFilterChosen(true); setCourse(item.label); }}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}<div className={showAllCourses ? "expandable-section is-open" : "expandable-section"}><div>{courseProgress.slice(7).map((item) => <button key={item.label} onClick={() => { setCourseFilterChosen(true); setCourse(item.label); }}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div></div></div> : <p className="comments-empty">Sin datos para los filtros seleccionados.</p>}
                     {courseProgress.length > 7 && <button className="show-more-button" onClick={() => setShowAllCourses((current) => !current)}><span>{showAllCourses ? "Mostrar menos" : `Ver ${courseProgress.length - 7} más`}</span><span className="more-icon-shell more-glyph" aria-hidden="true">{showAllCourses ? "−" : "+"}</span></button>}
                   </article>
                 </section>
