@@ -11,6 +11,7 @@ import {
   loadPendingSection,
 } from "../lib/dashboard-data";
 import SatisfactionReport from "./SatisfactionReport";
+import PopupFilter, { useDelayedPanelClose } from "./ToolbarPopupFilter";
 
 type CategoryOption = { key: string; label: string; history?: Record<string, PeriodSummary> };
 
@@ -140,20 +141,6 @@ function SelectFilter({ label, allLabel = label, value, options, onChange }: { l
   );
 }
 
-function useDelayedPanelClose(onClose: () => void) {
-  const closeTimer = useRef<number | null>(null);
-  const cancelClose = () => {
-    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-    closeTimer.current = null;
-  };
-  const scheduleClose = () => {
-    cancelClose();
-    closeTimer.current = window.setTimeout(onClose, 240);
-  };
-  useEffect(() => cancelClose, []);
-  return { cancelClose, scheduleClose };
-}
-
 function PositionFilterMenu({ open, positions, options, onOpenChange, onToggle }: {
   open: boolean;
   positions: string[];
@@ -172,33 +159,6 @@ function PositionFilterMenu({ open, positions, options, onOpenChange, onToggle }
     <summary onClick={(event) => { event.preventDefault(); onOpenChange(!open); }}>Puestos {positions.length ? `· ${positions.length}` : ""}</summary>
     <div>{options.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => onToggle(item)} />{item}</label>)}</div>
   </details>;
-}
-
-function PopupFilter({ label, value, options, open, onOpenChange, onChange }: {
-  label: string;
-  value?: string;
-  options: Array<{ value: string; label: string }>;
-  open: boolean;
-  onOpenChange(open: boolean): void;
-  onChange(value: string): void;
-}) {
-  const selected = options.find((option) => option.value === value);
-  const { cancelClose, scheduleClose } = useDelayedPanelClose(() => onOpenChange(false));
-  return <div
-    className={open ? "toolbar-popup-filter open" : "toolbar-popup-filter"}
-    onMouseEnter={cancelClose}
-    onMouseLeave={scheduleClose}
-    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onOpenChange(false); }}
-  >
-    <button type="button" className="toolbar-popup-trigger" onClick={() => onOpenChange(!open)} aria-haspopup="listbox" aria-expanded={open}>
-      <span>{selected?.label ?? label}</span><i aria-hidden="true" />
-    </button>
-    {open && <div className="toolbar-popup-options" role="listbox" aria-label={label}>
-      <div className="toolbar-popup-scroll">
-        {options.length ? options.map((option) => <button type="button" key={option.value} className={option.value === value ? "active" : ""} onClick={() => { onChange(option.value); onOpenChange(false); }} role="option" aria-selected={option.value === value}><span>{option.label}</span><i aria-hidden="true" /></button>) : <p>Sin opciones disponibles.</p>}
-      </div>
-    </div>}
-  </div>;
 }
 
 export default function Home() {
@@ -626,8 +586,8 @@ export default function Home() {
                   </div> : <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>}
                   {openBook === "tienda" ? <>
                     <PositionFilterMenu open={positionMenuOpen} positions={positions} options={availablePositions} onOpenChange={(open) => { setPositionMenuOpen(open); if (open) setOpenFilterMenu(null); }} onToggle={togglePosition} />
-                    <PopupFilter label="Región" value={region === "all" ? undefined : region} options={availableRegions.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "people-region"} onOpenChange={(open) => { setOpenFilterMenu(open ? "people-region" : null); if (open) setPositionMenuOpen(false); }} onChange={setRegion} />
-                    <PopupFilter label="Cursos" value={course === "all" ? undefined : course} options={availableCourses.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "people-course"} onOpenChange={(open) => { setOpenFilterMenu(open ? "people-course" : null); if (open) setPositionMenuOpen(false); }} onChange={setCourse} />
+                    <PopupFilter label="Región" value={region === "all" ? undefined : region} options={availableRegions.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "people-region"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "people-region" : current === "people-region" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={setRegion} />
+                    <PopupFilter label="Cursos" value={course === "all" ? undefined : course} options={availableCourses.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "people-course"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "people-course" : current === "people-course" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={setCourse} />
                   </> : <>
                     <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
                     <SelectFilter label="Región" allLabel="Todos" value={region} options={availableRegions} onChange={setRegion} />
@@ -638,11 +598,11 @@ export default function Home() {
               ) : (
                 <>
                   {openBook === "tienda" ? <>
-                    <PopupFilter label="Año" value={yearFilterChosen ? year : undefined} options={[{ value: "2026", label: "2026" }]} open={openFilterMenu === "year"} onOpenChange={(open) => { setOpenFilterMenu(open ? "year" : null); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setYearFilterChosen(true); setYear(value); }} />
-                    <PopupFilter label="Mes" value={monthFilterChosen ? month : undefined} options={months.map((item, index) => ({ value: String(index + 1), label: item }))} open={openFilterMenu === "month"} onOpenChange={(open) => { setOpenFilterMenu(open ? "month" : null); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setMonthFilterChosen(true); setMonth(value); }} />
+                    <PopupFilter label="Año" value={yearFilterChosen ? year : undefined} options={[{ value: "2026", label: "2026" }]} open={openFilterMenu === "year"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "year" : current === "year" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setYearFilterChosen(true); setYear(value); }} />
+                    <PopupFilter label="Mes" value={monthFilterChosen ? month : undefined} options={months.map((item, index) => ({ value: String(index + 1), label: item }))} open={openFilterMenu === "month"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "month" : current === "month" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setMonthFilterChosen(true); setMonth(value); }} />
                     <PositionFilterMenu open={positionMenuOpen} positions={positions} options={availablePositions} onOpenChange={(open) => { setPositionMenuOpen(open); if (open) setOpenFilterMenu(null); }} onToggle={togglePosition} />
-                    <PopupFilter label="Región" value={region === "all" ? undefined : region} options={availableRegions.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "region"} onOpenChange={(open) => { setOpenFilterMenu(open ? "region" : null); if (open) setPositionMenuOpen(false); }} onChange={setRegion} />
-                    <PopupFilter label="Cursos" value={course === "all" ? undefined : course} options={availableCourses.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "course"} onOpenChange={(open) => { setOpenFilterMenu(open ? "course" : null); if (open) setPositionMenuOpen(false); }} onChange={setCourse} />
+                    <PopupFilter label="Región" value={region === "all" ? undefined : region} options={availableRegions.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "region"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "region" : current === "region" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={setRegion} />
+                    <PopupFilter label="Cursos" value={course === "all" ? undefined : course} options={availableCourses.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "course"} onOpenChange={(open) => { setOpenFilterMenu((current) => open ? "course" : current === "course" ? null : current); if (open) setPositionMenuOpen(false); }} onChange={setCourse} />
                   </> : <>
                     <label><span>Año</span><select value={year} onChange={(event) => setYear(event.target.value)}><option value="2026">2026</option></select></label>
                     <label><span>Mes</span><select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item, index) => <option value={String(index + 1)} key={item}>{item}</option>)}</select></label>

@@ -7,12 +7,12 @@ import {
   SatisfactionMetricRow,
   loadDashboardDetails,
 } from "../lib/dashboard-data";
+import PopupFilter from "./ToolbarPopupFilter";
 
 type Totals = {
   respuestas: number; scoreSum: number; scoreCount: number; npsValid: number;
   promoters: number; passives: number; detractors: number;
 };
-type FilterOption = string | { value: string; label: string };
 
 const rubricFields = [
   ["Dominio del tema", "dominio_suma", "dominio_n"],
@@ -45,17 +45,6 @@ function instructorName(value: string) { return String(value || "").trim() || "S
 function instructorKey(value: string) { return textKey(instructorName(value)); }
 function unique(rows: SatisfactionMetricRow[], field: "mes" | "programa" | "curso" | "instructor" | "region") {
   return [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
-}
-
-function Filter({ value, allLabel, options, onChange }: { value: string; allLabel: string; options: FilterOption[]; onChange(value: string): void }) {
-  return <label className="survey-filter"><select value={value} aria-label={allLabel} onChange={(event) => onChange(event.target.value)}>
-    <option value="all">Todos</option>
-    {options.map((option) => {
-      const optionValue = typeof option === "string" ? option : option.value;
-      const label = typeof option === "string" ? option : option.label;
-      return <option value={optionValue} key={optionValue}>{label}</option>;
-    })}
-  </select></label>;
 }
 
 function MoreButton({ open, count, onClick }: { open: boolean; count: number; onClick(): void }) {
@@ -105,9 +94,8 @@ function TrendChart({ items, months, onMonthsChange }: { items: Array<{ label: s
 
 export default function SatisfactionReport({ dashboard }: { dashboard: CategoryDashboard }) {
   const rows = dashboard.metrics as SatisfactionMetricRow[];
-  const currentPeriod = dashboard.cutoffDate?.slice(0, 7) || dashboard.period;
-  const [year, setYear] = useState(currentPeriod.slice(0, 4));
-  const [month, setMonth] = useState(currentPeriod.slice(5, 7));
+  const [year, setYear] = useState("all");
+  const [month, setMonth] = useState("all");
   const [program, setProgram] = useState("all");
   const [region, setRegion] = useState("all");
   const [instructorMode, setInstructorMode] = useState(false);
@@ -126,6 +114,7 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
   const [expandedInstructorKey, setExpandedInstructorKey] = useState<string | null>(null);
   const [expandedProgram, setExpandedProgram] = useState<string | null>(null);
   const [expandedInstructorCourse, setExpandedInstructorCourse] = useState<string | null>(null);
+  const [openFilterMenu, setOpenFilterMenu] = useState<string | null>(null);
   const insightContentRef = useRef<HTMLDivElement>(null);
   const [insightHeight, setInsightHeight] = useState<number>();
 
@@ -163,6 +152,9 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
   const npsValue = nps(totals);
   const instructorCount = new Set(filtered.map((row) => instructorKey(row.instructor))).size;
   const evaluatedCourseCount = new Set(filtered.map((row) => row.curso).filter(Boolean)).size;
+  const periodReady = year !== "all" && month !== "all";
+  const selectedCourses = unique(filtered, "curso");
+  const courseTitle = selectedCourses.length === 0 ? "Curso" : selectedCourses.length <= 3 ? selectedCourses.join(" · ") : `${selectedCourses[0]} y ${selectedCourses.length - 1} cursos más`;
   const rubricRows = rubricFields.map(([label, sumField, countField]) => { const sum = filtered.reduce((value, row) => value + Number(row[sumField] || 0), 0); const count = filtered.reduce((value, row) => value + Number(row[countField] || 0), 0); return { label, count, value: count ? (sum / (count * 5)) * 100 : 0 }; }).filter((item) => item.count).sort((a, b) => b.value - a.value);
   const selectedPeriod = year !== "all" && month !== "all" ? `${year}-${month}` : null;
   const trendBase = rows.filter((row) => matchesDimensions(row) && (year === "all" || row.mes.startsWith(year)) && (!selectedInstructorKeys.length || selectedInstructorKeys.includes(instructorKey(row.instructor))) && (!selectedPeriod || row.mes <= selectedPeriod));
@@ -254,9 +246,9 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
   };
 
   return <>
-    <div className="floating-toolbar-frame"><div className={instructorMode ? "survey-toolbar people" : "survey-toolbar"} aria-label="Filtros de satisfacción">
+    <div className="floating-toolbar-frame"><div className={instructorMode ? "survey-toolbar people custom-filters" : "survey-toolbar custom-filters"} aria-label="Filtros de satisfacción">
       {instructorMode ? <>
-        <div className="instructor-period-filters"><Filter value={year} allLabel="Año" options={years} onChange={(value) => { setYear(value); setMonth("all"); setExpandedInstructorCourse(null); }} /><Filter value={month} allLabel="Mes" options={monthOptions} onChange={(value) => { setMonth(value); setExpandedInstructorCourse(null); }} /></div>
+        <div className="instructor-period-filters"><PopupFilter label="Año" value={year === "all" ? undefined : year} options={years.map((value) => ({ value, label: value }))} open={openFilterMenu === "instructor-year"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "instructor-year" : current === "instructor-year" ? null : current)} onChange={(value) => { setYear(value); setMonth("all"); setExpandedInstructorCourse(null); }} /><PopupFilter label="Mes" value={month === "all" ? undefined : month} options={monthOptions} open={openFilterMenu === "instructor-month"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "instructor-month" : current === "instructor-month" ? null : current)} onChange={(value) => { setMonth(value); setExpandedInstructorCourse(null); }} /></div>
         <div className="instructor-picker">
           <label className="toolbar-search survey-search"><span>Buscar</span><i>⌕</i><input value={instructorSearch} onFocus={() => setInstructorSearchOpen(true)} onBlur={() => setInstructorSearchOpen(false)} onChange={(event) => { setInstructorSearch(event.target.value); setInstructorSearchOpen(true); }} onKeyDown={(event) => { if (event.key === "Enter" && instructorMatches[0]) { event.preventDefault(); addInstructor(instructorMatches[0].value); } if (event.key === "Escape") setInstructorSearchOpen(false); }} placeholder={selectedInstructorKeys.length ? "Agregar otro instructor" : "Buscar instructor"} autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={Boolean(instructorQuery && instructorSearchOpen)} aria-controls="instructor-suggestions" /></label>
           {instructorQuery && instructorSearchOpen && <div className="instructor-suggestions" id="instructor-suggestions" role="listbox">{instructorMatches.length ? instructorMatches.map((item) => <button key={item.value} onMouseDown={(event) => { event.preventDefault(); addInstructor(item.value); }} role="option" aria-selected={selectedInstructorKeys.includes(item.value)}><span>{item.label}</span><small>{item.responses.toLocaleString("es-MX")} encuestas</small><b aria-hidden="true">+</b></button>) : <p>No encontramos instructores con esa búsqueda.</p>}</div>}
@@ -264,15 +256,16 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
         </div>
         <button className="toolbar-people active" onClick={closeInstructorMode} aria-label="Volver al reporte" title="Volver al reporte"><span className="close-icon" aria-hidden="true" /></button>
       </> : <>
-        <Filter value={year} allLabel="Año" options={years} onChange={(value) => { setYear(value); setMonth("all"); }} />
-        <Filter value={month} allLabel="Mes" options={monthOptions} onChange={setMonth} />
-        <Filter value={program} allLabel="Programa" options={unique(rows, "programa")} onChange={(value) => { setProgram(value); setExpandedProgram(value === "all" ? null : value); }} />
-        <Filter value={region} allLabel="Región" options={unique(rows, "region")} onChange={setRegion} />
-        <button className="toolbar-people" onClick={() => { setProgram("all"); setRegion("all"); setExpandedProgram(null); setInstructorMode(true); }} aria-label="Analizar instructores" title="Analizar instructores">◎</button>
+        <PopupFilter label="Año" value={year === "all" ? undefined : year} options={years.map((value) => ({ value, label: value }))} open={openFilterMenu === "year"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "year" : current === "year" ? null : current)} onChange={(value) => { setYear(value); setMonth("all"); }} />
+        <PopupFilter label="Mes" value={month === "all" ? undefined : month} options={monthOptions} open={openFilterMenu === "month"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "month" : current === "month" ? null : current)} onChange={setMonth} />
+        <PopupFilter label="Programa" value={program === "all" ? undefined : program} options={unique(rows, "programa").map((value) => ({ value, label: value }))} open={openFilterMenu === "program"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "program" : current === "program" ? null : current)} onChange={(value) => { setProgram(value); setExpandedProgram(value); }} />
+        <PopupFilter label="Región" value={region === "all" ? undefined : region} options={unique(rows, "region").map((value) => ({ value, label: value }))} open={openFilterMenu === "region"} onOpenChange={(open) => setOpenFilterMenu((current) => open ? "region" : current === "region" ? null : current)} onChange={setRegion} />
+        <button className="toolbar-people" disabled={!periodReady} onClick={() => { setProgram("all"); setRegion("all"); setExpandedProgram(null); setOpenFilterMenu(null); setInstructorMode(true); }} aria-label="Analizar instructores" title={periodReady ? "Analizar instructores" : "Selecciona año y mes primero"}>◎</button>
       </>}
     </div></div>
 
-    <section className="report-lead survey-lead"><h3>{instructorMode ? "Análisis de instructores" : "Experiencia de capacitación"}</h3><p>{instructorMode ? "Selecciona uno o varios instructores para comparar calificaciones, temas recurrentes y oportunidades." : "Una lectura unificada de satisfacción, recomendación y desempeño. Año y mes controlan el periodo; Programa agrupa internamente todos sus cursos."}</p><small>Información consolidada hasta el {dashboard.cutoffDate || dashboard.period}.</small></section>
+    {!periodReady ? <section className="filter-empty-state survey-filter-empty"><span>PERIODO REQUERIDO</span><h3>Selecciona año y mes</h3><p>Define el periodo para consultar la experiencia, recomendación y desempeño de los cursos.</p></section> : <>
+    <section className="report-lead survey-lead"><h3>{instructorMode ? "Análisis de instructores" : courseTitle}</h3><p>{instructorMode ? "Selecciona uno o varios instructores para comparar calificaciones, temas recurrentes y oportunidades." : "Una lectura unificada de satisfacción, recomendación y desempeño. Programa agrupa internamente todos sus cursos."}</p><small>Información consolidada hasta el {dashboard.cutoffDate || dashboard.period}.</small></section>
 
     <section className="survey-kpis"><article className={`metric-status ${metricTone(isaValue)}`} title="Semáforo ISA: verde ≥ 90%, naranja 80–89.9%, rojo < 80%"><span>ISA</span><strong>{isaValue.toFixed(1)}%</strong><small>Promedio de rubros evaluados</small></article><article className={`metric-status ${metricTone(npsValue)}`} title="NPS = porcentaje de promotores menos porcentaje de detractores"><span>NPS</span><strong>{npsValue.toFixed(1)}</strong><small>Promotores menos detractores</small></article><article><span>Encuestas</span><strong>{totals.respuestas.toLocaleString("es-MX")}</strong><small>En la selección actual</small></article><article><span>Instructores</span><strong>{instructorCount.toLocaleString("es-MX")}</strong><small>{evaluatedCourseCount.toLocaleString("es-MX")} cursos evaluados</small></article></section>
 
@@ -291,5 +284,6 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
         {commentsError ? <p className="comments-empty">{commentsError}</p> : visibleVoiceComments.length ? <><SmoothList open={showAllComments} visible={6} className="comment-list">{visibleVoiceComments.slice(0, 18).map((item, index) => <blockquote key={`${item.fecha ?? item.theme}-${index}`}><span className={`comment-tone ${item.sentiment}`}>{item.sentiment === "negative" ? "Oportunidad" : item.sentiment === "positive" ? "Positivo" : "Comentario"}</span><p>{item.comentario}</p><footer>{item.programa} · {item.instructor}<span>{item.fecha || "Comentario representativo"}</span></footer></blockquote>)}</SmoothList>{visibleVoiceComments.length > 6 && <MoreButton open={showAllComments} count={Math.min(12, visibleVoiceComments.length - 6)} onClick={() => setShowAllComments((current) => !current)} />}</> : <p className="comments-empty">No hay comentarios para esta selección.</p>}
       </article>}
     </section>
+    </>}
   </>;
 }
