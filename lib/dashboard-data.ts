@@ -99,6 +99,9 @@ export type CategoryDashboard = {
   npsScaleStatus: string;
 };
 
+export type EicAdministrativeRow = Record<string, string | number | boolean | null>;
+export type EicAdministrativeViews = Record<string, EicAdministrativeRow[]>;
+
 const dashboardCache = new Map<string, Promise<CategoryDashboard>>();
 const pendingDashboardCache = new Map<string, Promise<PendingRow[]>>();
 const detailDashboardCache = new Map<string, Promise<SatisfactionComment[]>>();
@@ -184,4 +187,10 @@ export function loadDashboardDetails(dashboard: CategoryDashboard) {
     detailDashboardCache.set(cacheKey, request);
   }
   return detailDashboardCache.get(cacheKey)!;
+}
+
+export function loadAdministrativeViews(dashboard: CategoryDashboard) {
+  return requestJson<EicAdministrativeViews>(
+    `/api/dashboard/${encodeURIComponent(dashboard.period)}/${encodeURIComponent(dashboard.category)}/views`,
+  );
 }

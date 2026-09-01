@@ -27,10 +27,8 @@ export default function ToolbarPopupFilter({ label, value, options, open, classN
   onOpenChange(open: boolean): void;
   onChange(value: string): void;
 }) {
-  const lastOptions = useRef<ToolbarPopupOption[]>(options);
   const scrollRef = useRef<HTMLDivElement>(null);
-  if (options.length) lastOptions.current = options;
-  const visibleOptions = options.length ? options : lastOptions.current.length ? lastOptions.current : value ? [{ value, label: value }] : [];
+  const visibleOptions = options.length ? options : value ? [{ value, label: value }] : [];
   const selected = visibleOptions.find((option) => option.value === value);
   const forceScrollable = /(?:program|region|course)-filter/.test(className);
   const scrollHeight = Math.min(300, visibleOptions.length * 44 + 22);

@@ -11,6 +11,7 @@ import {
   loadPendingSection,
 } from "../lib/dashboard-data";
 import SatisfactionReport from "./SatisfactionReport";
+import EicStatusReport from "./EicStatusReport";
 import PopupFilter, { useDelayedPanelClose } from "./ToolbarPopupFilter";
 
 type CategoryOption = {
@@ -297,6 +298,7 @@ export default function Home() {
   }, [period, selectedCategories]);
 
   const activeSurvey = dashboards.length === 1 && dashboards[0].dataKind === "satisfaction" ? dashboards[0] : null;
+  const activeEic = dashboards.length === 1 && dashboards[0].dataKind === "eic_administrative" ? dashboards[0] : null;
   const tiendaChapters = useMemo(
     () => tiendaChapterKeys.map((key) => categories.find((category) => category.key === key)).filter((category): category is CategoryOption => Boolean(category)),
     [categories],
@@ -564,7 +566,7 @@ export default function Home() {
           Todos los reportes
         </button>
         <h1>Reportes</h1>
-        <p>{reportIsSurvey ? "Explora satisfacción, recomendación y desempeño por programa e instructor." : "Consulta el avance mensual, compara regiones y encuentra cursos pendientes."}</p>
+        <p>{activeEic ? "Consulta presupuesto, inversión, cotizaciones, capacitaciones y pagos por dirección C-Level." : reportIsSurvey ? "Explora satisfacción, recomendación y desempeño por programa e instructor." : "Consulta el avance mensual, compara regiones y encuentra cursos pendientes."}</p>
       </section>
 
     <main className="workspace-shell">
@@ -661,11 +663,11 @@ export default function Home() {
                   />
                 </div>
               </div>}
-              <div className="sheet-title-copy"><span className="eyebrow">{reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              <div className="sheet-title-copy"><span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
             {loading && tiendaPeriodReady ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
-            {!activeSurvey && <div className="floating-toolbar-frame"><div className={peopleMode ? "sheet-toolbar people" : "sheet-toolbar"} aria-label="Filtros del reporte">
+            {!activeSurvey && !activeEic && <div className="floating-toolbar-frame"><div className={peopleMode ? "sheet-toolbar people" : "sheet-toolbar"} aria-label="Filtros del reporte">
               {peopleMode ? (
                 <>
                   {openBook === "tienda" ? <div className="people-picker">
@@ -705,7 +707,7 @@ export default function Home() {
               )}
             </div></div>}
 
-            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} /> : <><section className="report-lead">
+            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} /> : activeEic ? <EicStatusReport key={`${activeEic.category}/${activeEic.period}`} dashboard={activeEic} year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} /> : <><section className="report-lead">
               <h3>{selectedLabel}</h3>
               <p>{peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde RunSQL."}</p>
               <small>{usingDemo ? "Aún no hay datos sincronizados para este periodo. Publica la información desde RunSQL." : `Fecha de corte del periodo ${period}.`}</small>
