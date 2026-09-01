@@ -302,13 +302,17 @@ html, body { background: #fff; }
 .tienda-letterhead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin: -46px 0 48px -24px; }
 .tienda-letterhead-logo { width: min(250px, 54%); height: 64px; overflow: hidden; background: transparent; }
 .tienda-letterhead-logo img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: left center; }
-.tienda-accent-picker { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; gap: 7px; padding: 5px; border-radius: 999px; background: #fff; box-shadow: 0 8px 24px rgba(39, 28, 31, .11); transition: box-shadow .2s ease; }
-.tienda-accent-picker.is-open { box-shadow: 0 10px 28px rgba(39, 28, 31, .14); }
-.accent-swatch { width: 34px; height: 34px; flex: 0 0 34px; padding: 0; border: 3px solid transparent; border-radius: 50%; background-clip: padding-box !important; box-shadow: none; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }
+.tienda-accent-picker { position: relative; z-index: 3; width: 36px; height: 36px; flex: 0 0 36px; margin: 0; }
+.accent-options { position: absolute; top: 0; right: 0; width: 36px; height: 36px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: 0 7px 20px rgba(39, 28, 31, .1); pointer-events: none; transition: width .36s cubic-bezier(.22, .78, .22, 1), box-shadow .24s ease; }
+.accent-options > div { position: absolute; top: 4px; right: 4px; display: flex; gap: 6px; opacity: 0; transform: translateX(8px); transition: opacity .18s ease, transform .32s cubic-bezier(.22, .78, .22, 1); }
+.tienda-accent-picker.is-open .accent-options { width: 210px; box-shadow: 0 9px 24px rgba(39, 28, 31, .14); pointer-events: auto; }
+.tienda-accent-picker.is-open .accent-options > div { opacity: 1; transform: translateX(0); transition-delay: .05s; }
+.accent-swatch { width: 28px; height: 28px; flex: 0 0 28px; padding: 0; border: 2px solid transparent; border-radius: 50%; background-clip: padding-box !important; box-shadow: none; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, opacity .16s ease; }
 .accent-swatch:hover { transform: scale(1.06); }
 .accent-swatch:focus-visible { outline: 2px solid #1d1d1f; outline-offset: 3px; }
-.accent-swatch.is-selected { box-shadow: 0 0 0 3px #ececef; }
-.accent-toggle { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .92); }
+.accent-swatch.is-selected { box-shadow: 0 0 0 2px #e3e3e7; }
+.accent-toggle { position: absolute; top: 4px; right: 4px; z-index: 2; border-color: #fff; opacity: 1; box-shadow: 0 0 0 2px rgba(255, 255, 255, .94); transition: opacity .15s ease, transform .24s ease; }
+.tienda-accent-picker.is-open .accent-toggle { opacity: 0; transform: scale(.78); pointer-events: none; }
 .tienda-letterhead .sheet-title-copy { position: relative; min-width: 0; margin: 0; padding: 0; container-type: inline-size; }
 .tienda-letterhead .sheet-title-copy::before { position: absolute; top: -6px; bottom: -6px; left: -24px; width: 4px; background: var(--tienda-accent, #f8d31c); content: ""; transition: background .24s ease; }
 .tienda-letterhead .sheet-title-copy h2 { max-width: none; font-size: clamp(22px, 6.15cqi, 42px); letter-spacing: -.055em; white-space: nowrap; }
@@ -474,9 +478,12 @@ html, body { background: #fff; }
   .sheet { width: calc(100% - 20px); margin: 10px 10px 50px; padding: 48px 25px 60px; }
   .tienda-letterhead-top { gap: 14px; margin: -24px 0 38px -14px; }
   .tienda-letterhead-logo { width: min(220px, 72%); height: 56px; }
-  .tienda-accent-picker { min-width: 38px; min-height: 38px; gap: 5px; padding: 4px; }
-  .accent-swatch { width: 30px; height: 30px; flex-basis: 30px; }
-  .tienda-accent-picker.is-open { max-width: 170px; flex-wrap: wrap; }
+  .tienda-accent-picker { width: 32px; height: 32px; flex-basis: 32px; }
+  .accent-options { width: 32px; height: 32px; }
+  .accent-options > div { top: 4px; right: 4px; gap: 4px; }
+  .tienda-accent-picker.is-open .accent-options { width: 176px; }
+  .accent-swatch { width: 24px; height: 24px; flex-basis: 24px; }
+  .accent-toggle { top: 4px; right: 4px; }
   .tienda-letterhead .sheet-title-copy::before { left: -14px; width: 3px; }
   .tienda-letterhead .sheet-title-copy h2 { font-size: clamp(20px, 6.15cqi, 32px); }
   .metric-grid { grid-template-columns: 1fr; }

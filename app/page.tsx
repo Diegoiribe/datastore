@@ -584,22 +584,26 @@ export default function Home() {
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/academia-ventas-logo-black.png" alt="Universidad Corporativa Coppel · Programas Académicos" /></div>
                 <div className={accentPickerOpen ? "tienda-accent-picker is-open" : "tienda-accent-picker"}>
-                  {accentPickerOpen ? tiendaAccentOptions.map((option) => <button
-                    type="button"
-                    key={option.key}
-                    className={option.key === tiendaAccent.key ? "accent-swatch is-selected" : "accent-swatch"}
-                    style={{ background: option.swatch }}
-                    aria-label={`Usar color ${option.label}`}
-                    aria-pressed={option.key === tiendaAccent.key}
-                    onClick={() => { setTiendaAccent(option); setAccentPickerOpen(false); }}
-                  />) : <button
+                  <div className="accent-options" aria-hidden={!accentPickerOpen}>
+                    <div>{tiendaAccentOptions.map((option) => <button
+                      type="button"
+                      key={option.key}
+                      className={option.key === tiendaAccent.key ? "accent-swatch is-selected" : "accent-swatch"}
+                      style={{ background: option.swatch }}
+                      aria-label={`Usar color ${option.label}`}
+                      aria-pressed={option.key === tiendaAccent.key}
+                      disabled={!accentPickerOpen}
+                      onClick={() => { setTiendaAccent(option); setAccentPickerOpen(false); }}
+                    />)}</div>
+                  </div>
+                  <button
                     type="button"
                     className="accent-swatch accent-toggle"
                     style={{ background: tiendaAccent.swatch }}
                     aria-label="Mostrar colores del membrete"
-                    aria-expanded="false"
+                    aria-expanded={accentPickerOpen}
                     onClick={() => setAccentPickerOpen(true)}
-                  />}
+                  />
                 </div>
               </div>}
               <div className="sheet-title-copy"><span className="eyebrow">{reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
