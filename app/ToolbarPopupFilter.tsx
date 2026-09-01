@@ -32,6 +32,8 @@ export default function ToolbarPopupFilter({ label, value, options, open, classN
   if (options.length) lastOptions.current = options;
   const visibleOptions = options.length ? options : lastOptions.current.length ? lastOptions.current : value ? [{ value, label: value }] : [];
   const selected = visibleOptions.find((option) => option.value === value);
+  const forceScrollable = /(?:program|region|course)-filter/.test(className);
+  const scrollHeight = Math.min(300, visibleOptions.length * 44 + 22);
   const { cancelClose, scheduleClose } = useDelayedPanelClose(() => onOpenChange(false));
   useEffect(() => {
     if (!open) return;
@@ -40,6 +42,19 @@ export default function ToolbarPopupFilter({ label, value, options, open, classN
     });
     return () => window.cancelAnimationFrame(frame);
   }, [open]);
+  useEffect(() => {
+    const panel = scrollRef.current;
+    if (!open || !forceScrollable || !panel) return;
+    const keepWheelInsideMenu = (event: WheelEvent) => {
+      if (panel.scrollHeight <= panel.clientHeight) return;
+      const multiplier = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? panel.clientHeight : 1;
+      panel.scrollTop += event.deltaY * multiplier;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    panel.addEventListener("wheel", keepWheelInsideMenu, { passive: false });
+    return () => panel.removeEventListener("wheel", keepWheelInsideMenu);
+  }, [forceScrollable, open, visibleOptions.length]);
   return <div
     className={`toolbar-popup-filter${open ? " open" : ""}${className ? ` ${className}` : ""}`}
     onMouseEnter={cancelClose}
@@ -50,7 +65,7 @@ export default function ToolbarPopupFilter({ label, value, options, open, classN
       <span>{selected?.label ?? label}</span><i aria-hidden="true" />
     </button>
     {open && <div className="toolbar-popup-options" role="listbox" aria-label={label}>
-      <div className="toolbar-popup-scroll" ref={scrollRef}>
+      <div className="toolbar-popup-scroll" ref={scrollRef} style={forceScrollable ? { height: `${scrollHeight}px` } : undefined}>
         {visibleOptions.length ? visibleOptions.map((option) => <button type="button" key={option.value} className={option.value === value ? "active" : ""} onClick={() => { onChange(option.value); onOpenChange(false); }} role="option" aria-selected={option.value === value}><span>{option.label}</span><i aria-hidden="true" /></button>) : <p>Sin opciones disponibles.</p>}
       </div>
     </div>}
