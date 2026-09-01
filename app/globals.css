@@ -518,6 +518,15 @@ html, body { background: #fff; }
 .eic-direction-table > button > span:first-child small { margin-top: 4px; color: #929297; font-size: 7px; }
 .eic-direction-table > button > strong { color: #1c42e8; text-align: right; }
 .eic-initiative-list { border-bottom: 1px solid #e1e1e5; }
+.eic-initiative-tools { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(180px, .45fr); gap: 12px; padding: 18px 0 14px; }
+.eic-initiative-search { height: 42px; display: flex; align-items: center; gap: 9px; padding: 0 13px; border: 1px solid #dedee3; border-radius: 12px; background: #f7f7f9; transition: border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+.eic-initiative-search:focus-within { border-color: #b8c3ef; background: #fff; box-shadow: 0 0 0 3px rgba(28,66,232,.08); }
+.eic-initiative-search i { color: #77777d; font-size: 17px; font-style: normal; }
+.eic-initiative-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: #2f2f34; font-size: 10px; }
+.eic-initiative-search input::placeholder { color: #98989e; }
+.eic-status-filter { min-width: 0; }
+.eic-status-filter .toolbar-popup-trigger { width: 100%; height: 42px; justify-content: space-between; border: 1px solid #dedee3; border-radius: 12px; background: #f7f7f9; }
+.eic-status-filter .toolbar-popup-options { right: 0; left: auto; z-index: 15; width: min(360px, 82vw); }
 .eic-initiative-list > article { min-height: 66px; display: grid; grid-template-columns: 58px minmax(0, 1fr) minmax(105px, auto) 95px; align-items: center; gap: 14px; border-top: 1px solid #e1e1e5; }
 .eic-initiative-list > article:first-child { border-top: 0; }
 .eic-initiative-id { overflow: hidden; color: #8b8b91; font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
@@ -618,6 +627,7 @@ html, body { background: #fff; }
   .eic-operation-summary { grid-template-columns: 1fr 1fr; }
   .eic-direction-table { overflow-x: auto; }
   .eic-direction-head, .eic-direction-table > button { min-width: 650px; }
+  .eic-initiative-tools { grid-template-columns: 1fr; }
   .eic-initiative-list > article { grid-template-columns: 44px minmax(0, 1fr); padding: 12px 0; }
   .eic-initiative-list .eic-status, .eic-initiative-list article > strong { grid-column: 2; text-align: left; }
 }

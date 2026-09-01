@@ -75,7 +75,8 @@ export default function EicStatusReport({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cLevel, setCLevel] = useState("all");
-  const [direction, setDirection] = useState("all");
+  const [initiativeQuery, setInitiativeQuery] = useState("");
+  const [initiativeStatus, setInitiativeStatus] = useState("all");
   const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   useEffect(() => {
@@ -88,19 +89,33 @@ export default function EicStatusReport({
   }, [dashboard]);
 
   const allDirections = useMemo(() => views.directions ?? [], [views.directions]);
-  const cLevels = useMemo(() => [...new Set(allDirections.map((row) => text(row, "direccion_c_level")))].sort(), [allDirections]);
-  const directions = useMemo(() => [...new Set(allDirections
-    .filter((row) => cLevel === "all" || text(row, "direccion_c_level") === cLevel)
-    .map((row) => text(row, "direccion_nivel_2")))].sort(), [allDirections, cLevel]);
+  const cLevels = useMemo(() => [...new Set((views.c_level ?? []).map((row) => text(row, "direccion_c_level")))].sort(), [views.c_level]);
   const filteredDirections = useMemo(() => allDirections.filter((row) =>
-    (cLevel === "all" || text(row, "direccion_c_level") === cLevel) &&
-    (direction === "all" || text(row, "direccion_nivel_2") === direction)
-  ), [allDirections, cLevel, direction]);
+    cLevel === "all" || text(row, "direccion_c_level") === cLevel
+  ), [allDirections, cLevel]);
 
   const inScope = useCallback((row: EicAdministrativeRow) =>
-    (cLevel === "all" || text(row, "direccion_c_level") === cLevel) &&
-    (direction === "all" || text(row, "direccion_nivel_2") === direction), [cLevel, direction]);
+    cLevel === "all" || text(row, "direccion_c_level") === cLevel, [cLevel]);
   const initiatives = useMemo(() => (views.initiatives ?? []).filter(inScope), [views.initiatives, inScope]);
+  const initiativeStatuses = useMemo(() => [...new Set(initiatives.map((row) =>
+    text(row, "estatus_grupo_principal", text(row, "estatus_cotizacion", "Sin estatus"))
+  ))].sort(), [initiatives]);
+  const effectiveInitiativeStatus = initiativeStatus === "all" || initiativeStatuses.includes(initiativeStatus) ? initiativeStatus : "all";
+  const visibleInitiatives = useMemo(() => {
+    const query = initiativeQuery.trim().toLocaleLowerCase("es");
+    return initiatives.filter((row) => {
+      const status = text(row, "estatus_grupo_principal", text(row, "estatus_cotizacion", "Sin estatus"));
+      const matchesStatus = effectiveInitiativeStatus === "all" || status === effectiveInitiativeStatus;
+      const matchesQuery = !query || [
+        text(row, "identificador", ""),
+        text(row, "nombre_iniciativa", ""),
+        text(row, "direccion_c_level", ""),
+        text(row, "proveedor_seleccionado", ""),
+        status,
+      ].join(" ").toLocaleLowerCase("es").includes(query);
+      return matchesStatus && matchesQuery;
+    });
+  }, [effectiveInitiativeStatus, initiativeQuery, initiatives]);
   const quotationRows = useMemo(() => (views.quotation_status ?? []).filter(inScope), [views.quotation_status, inScope]);
   const trainingRows = useMemo(() => (views.training_status ?? []).filter(inScope), [views.training_status, inScope]);
   const paymentRows = useMemo(() => (views.payment_status ?? []).filter(inScope), [views.payment_status, inScope]);
@@ -109,6 +124,17 @@ export default function EicStatusReport({
   const paymentStatus = useMemo(() => groupStatus(paymentRows, "estatus_pago", "movimientos"), [paymentRows]);
 
   const totals = useMemo(() => {
+    if (cLevel === "all" && views.general?.[0]) {
+      const general = views.general[0];
+      return {
+        budget: number(general, "presupuesto_autorizado_mxn"),
+        investment: number(general, "inversion_actual_mxn"),
+        charged: number(general, "cargado_al_centro_mxn"),
+        remaining: number(general, "presupuesto_por_ejercer_mxn"),
+        budgetProgress: number(general, "avance_presupuesto"),
+        accountingProgress: number(general, "avance_contable"),
+      };
+    }
     const budget = sum(filteredDirections, "presupuesto_autorizado_mxn");
     const investment = sum(filteredDirections, "inversion_actual_mxn");
     const charged = sum(filteredDirections, "cargado_al_centro_mxn");
@@ -120,19 +146,22 @@ export default function EicStatusReport({
       budgetProgress: budget ? investment / budget : 0,
       accountingProgress: budget ? charged / budget : 0,
     };
-  }, [filteredDirections]);
+  }, [cLevel, filteredDirections, views.general]);
 
-  const operational = useMemo(() => ({
-    needs: sum(filteredDirections, "necesidades_activas"),
-    trainings: sum(filteredDirections, "capacitaciones"),
-    groups: sum(filteredDirections, "grupos"),
-    delivered: sum(filteredDirections, "capacitaciones_impartidas"),
-    inProgress: sum(filteredDirections, "capacitaciones_en_curso"),
-    projectedPeople: sum(filteredDirections, "pax_proyectados"),
-    actualPeople: sum(filteredDirections, "pax_reales"),
-    pendingPayment: sum(filteredDirections, "pago_pendiente_mxn"),
-    executedPayment: sum(filteredDirections, "pago_ejecutado_mxn"),
-  }), [filteredDirections]);
+  const operational = useMemo(() => {
+    const rows = cLevel === "all" && views.general?.[0] ? [views.general[0]] : filteredDirections;
+    return {
+      needs: sum(rows, "necesidades_activas"),
+      trainings: sum(rows, "capacitaciones"),
+      groups: sum(rows, "grupos"),
+      delivered: sum(rows, "capacitaciones_impartidas"),
+      inProgress: sum(rows, "capacitaciones_en_curso"),
+      projectedPeople: sum(rows, "pax_proyectados"),
+      actualPeople: sum(rows, "pax_reales"),
+      pendingPayment: sum(rows, "pago_pendiente_mxn"),
+      executedPayment: sum(rows, "pago_ejecutado_mxn"),
+    };
+  }, [cLevel, filteredDirections, views.general]);
 
   const cLevelComparison = useMemo(() => {
     const rows = cLevel === "all" ? (views.c_level ?? []) : (views.c_level ?? []).filter((row) => text(row, "direccion_c_level") === cLevel);
@@ -146,15 +175,14 @@ export default function EicStatusReport({
   }, [cLevel, views.c_level]);
 
   const years = [...new Set([dashboard.period.slice(0, 4), ...Object.keys(dashboard.history).map((item) => item.slice(0, 4))])].sort();
-  const scopeLabel = direction !== "all" ? direction : cLevel !== "all" ? cLevel : "Vista general";
+  const scopeLabel = cLevel !== "all" ? cLevel : "Vista general";
 
   return <div className="eic-report">
     <div className="floating-toolbar-frame eic-toolbar-frame">
       <div className="sheet-toolbar eic-toolbar" aria-label="Filtros del estatus de planes de capacitación">
         <PopupFilter label="Año" value={year} options={years.map((item) => ({ value: item, label: item }))} open={openFilter === "eic-year"} onOpenChange={(open) => setOpenFilter(open ? "eic-year" : null)} onChange={onYearChange} />
         <PopupFilter label="Mes" className="month-filter" value={month} options={monthNames.map((label, index) => ({ value: String(index + 1), label }))} open={openFilter === "eic-month"} onOpenChange={(open) => setOpenFilter(open ? "eic-month" : null)} onChange={onMonthChange} />
-        <PopupFilter label="C-Level" className="region-filter" value={cLevel} options={[{ value: "all", label: "Todos los C-Level" }, ...cLevels.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-c-level"} onOpenChange={(open) => setOpenFilter(open ? "eic-c-level" : null)} onChange={(value) => { setCLevel(value); setDirection("all"); }} />
-        <PopupFilter label="Dirección" className="course-filter" value={direction} options={[{ value: "all", label: "Todas las direcciones" }, ...directions.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-direction"} onOpenChange={(open) => setOpenFilter(open ? "eic-direction" : null)} onChange={setDirection} />
+        <PopupFilter label="C-Level" className="region-filter" value={cLevel} options={[{ value: "all", label: "Todas las direcciones C-Level" }, ...cLevels.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-c-level"} onOpenChange={(open) => setOpenFilter(open ? "eic-c-level" : null)} onChange={setCLevel} />
       </div>
     </div>
 
@@ -189,7 +217,7 @@ export default function EicStatusReport({
       <section className="eic-section">
         <header className="eic-section-heading"><div><span>Panorama por C-Level</span><small>Presupuesto, inversión y número de capacitaciones</small></div><b>{cLevelComparison.length} {cLevelComparison.length === 1 ? "dirección" : "direcciones"}</b></header>
         <div className="eic-c-level-list">
-          {cLevelComparison.length ? cLevelComparison.map((item) => <button type="button" key={item.label} onClick={() => { setCLevel(item.label); setDirection("all"); }}>
+          {cLevelComparison.length ? cLevelComparison.map((item) => <button type="button" key={item.label} onClick={() => setCLevel(item.label)}>
             <span><strong>{item.label}</strong><small>{item.trainings.toLocaleString("es-MX")} capacitaciones</small></span>
             <i><b style={{ width: `${Math.min(item.progress * 100, 100)}%` }} /></i>
             <span className="eic-c-level-money"><strong>{money(item.investment)}</strong><small>de {money(item.budget)}</small></span>
@@ -216,11 +244,11 @@ export default function EicStatusReport({
       </section>
 
       <section className="eic-section">
-        <header className="eic-section-heading"><div><span>Direcciones de primera línea</span><small>Detalle financiero y operativo dentro de la selección</small></div><b>{filteredDirections.length}</b></header>
+        <header className="eic-section-heading"><div><span>Detalle por dirección C-Level</span><small>Lectura financiera y operativa de las siete direcciones</small></div><b>{filteredDirections.filter((row) => text(row, "direccion_c_level") !== "Sin dirección").length}</b></header>
         <div className="eic-direction-table">
           <div className="eic-direction-head"><span>Dirección</span><span>Capacitaciones</span><span>Presupuesto</span><span>Inversión</span><span>Avance</span></div>
-          {filteredDirections.map((row) => <button type="button" key={`${text(row, "direccion_c_level")}-${text(row, "direccion_nivel_2")}`} onClick={() => { setCLevel(text(row, "direccion_c_level")); setDirection(text(row, "direccion_nivel_2")); }}>
-            <span><strong>{text(row, "direccion_nivel_2")}</strong><small>{text(row, "direccion_c_level")}</small></span>
+          {filteredDirections.filter((row) => text(row, "direccion_c_level") !== "Sin dirección").map((row) => <button type="button" key={text(row, "direccion_c_level")} onClick={() => setCLevel(text(row, "direccion_c_level"))}>
+            <span><strong>{text(row, "direccion_c_level")}</strong><small>Dirección C-Level</small></span>
             <span>{number(row, "capacitaciones").toLocaleString("es-MX")}</span>
             <span>{compactNumber(number(row, "presupuesto_autorizado_mxn"))}</span>
             <span>{compactNumber(number(row, "inversion_actual_mxn"))}</span>
@@ -230,15 +258,19 @@ export default function EicStatusReport({
       </section>
 
       <section className="eic-section eic-initiatives-section">
-        <header className="eic-section-heading"><div><span>Planes y capacitaciones</span><small>Seguimiento individual de las iniciativas relacionadas</small></div><b>{initiatives.length}</b></header>
+        <header className="eic-section-heading eic-initiatives-heading"><div><span>Planes y capacitaciones</span><small>Seguimiento individual de las iniciativas relacionadas</small></div><b>{visibleInitiatives.length} de {initiatives.length}</b></header>
+        <div className="eic-initiative-tools">
+          <label className="eic-initiative-search"><i aria-hidden="true">⌕</i><input value={initiativeQuery} onChange={(event) => setInitiativeQuery(event.target.value)} placeholder="Buscar plan, capacitación, ID o proveedor" aria-label="Buscar planes y capacitaciones" /></label>
+          <PopupFilter label="Estatus" className="course-filter eic-status-filter" value={effectiveInitiativeStatus} options={[{ value: "all", label: "Todos los estatus" }, ...initiativeStatuses.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-status"} onOpenChange={(open) => setOpenFilter(open ? "eic-status" : null)} onChange={setInitiativeStatus} />
+        </div>
         <div className="eic-initiative-list">
-          {initiatives.slice(0, 12).map((row, index) => <article key={`${text(row, "identificador")}-${index}`}>
+          {visibleInitiatives.map((row, index) => <article key={`${text(row, "identificador")}-${index}`}>
             <span className="eic-initiative-id">{text(row, "identificador", "S/ID")}</span>
             <div><strong>{text(row, "nombre_iniciativa", "Sin nombre")}</strong><small>{text(row, "direccion_nivel_2")} · {text(row, "proveedor_seleccionado", "Proveedor por definir")}</small></div>
             <span className={`eic-status ${statusTone(text(row, "estatus_grupo_principal", text(row, "estatus_cotizacion")))}`}>{text(row, "estatus_grupo_principal", text(row, "estatus_cotizacion"))}</span>
             <strong>{money(number(row, "inversion_actual_mxn"))}</strong>
           </article>)}
-          {!initiatives.length && <p className="eic-empty">No hay iniciativas asociadas a esta selección.</p>}
+          {!visibleInitiatives.length && <p className="eic-empty">No hay iniciativas que coincidan con los filtros.</p>}
         </div>
       </section>
     </>}
