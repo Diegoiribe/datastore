@@ -300,14 +300,8 @@ html, body { background: #fff; }
 .sheet-title h2 { max-width: 650px; margin-top: 14px; font-size: clamp(39px, 4vw, 54px); font-weight: 680; line-height: 1.04; }
 .sheet-title.tienda-letterhead { display: block; }
 .tienda-letterhead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin: -46px -24px 48px -24px; }
-.tienda-letterhead-logo { width: min(270px, 62%); height: 64px; display: grid; grid-template-columns: auto 1px 1fr; align-items: end; gap: 11px; background: transparent; color: #171719; }
-.coppel-brand-block { position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding-top: 15px; font-size: 13px; line-height: .96; letter-spacing: -.035em; }
-.coppel-brand-block strong { margin-bottom: 3px; font-size: 16px; font-weight: 760; line-height: .9; }
-.coppel-dots { position: absolute; top: 0; left: 10px; display: flex; align-items: center; gap: 3px; }
-.coppel-dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: #f8d31c; }
-.coppel-dots i:first-child { width: 10px; height: 10px; }
-.brand-divider { width: 1px; height: 27px; display: block; align-self: end; background: #1d1d1f; }
-.sales-academy-name { display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 1px; font-size: 15px; line-height: 1.05; letter-spacing: -.035em; white-space: nowrap; }
+.tienda-letterhead-logo { width: min(270px, 66%); height: 92px; overflow: hidden; background: transparent; }
+.tienda-letterhead-logo img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: left top; }
 .tienda-accent-picker { position: relative; z-index: 3; width: 30px; height: 30px; flex: 0 0 30px; margin: 0; }
 .accent-options { position: absolute; top: 0; right: 0; width: 30px; height: 30px; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: 0 6px 18px rgba(39, 28, 31, .09); pointer-events: none; transition: width .36s cubic-bezier(.22, .78, .22, 1), box-shadow .24s ease; }
 .accent-options > div { position: absolute; top: 1px; right: 1px; display: flex; gap: 6px; opacity: 0; transform: translateX(8px); transition: opacity .18s ease, transform .32s cubic-bezier(.22, .78, .22, 1); }
@@ -486,11 +480,7 @@ html, body { background: #fff; }
   .filter-rail.is-expanded { position: fixed; inset: 0 auto 0 0; z-index: 20; width: min(92vw, 430px); overflow-y: auto; }
   .sheet { width: calc(100% - 20px); margin: 10px 10px 50px; padding: 48px 25px 60px; }
   .tienda-letterhead-top { gap: 14px; margin: -24px -14px 38px -14px; }
-  .tienda-letterhead-logo { width: min(235px, 76%); height: 56px; gap: 8px; }
-  .coppel-brand-block { font-size: 11px; }
-  .coppel-brand-block strong { font-size: 14px; }
-  .brand-divider { height: 24px; }
-  .sales-academy-name { font-size: 13px; }
+  .tienda-letterhead-logo { width: min(235px, 78%); height: 80px; }
   .tienda-accent-picker { width: 26px; height: 26px; flex-basis: 26px; }
   .accent-options { width: 26px; height: 26px; }
   .accent-options > div { top: 1px; right: 1px; gap: 4px; }
@@ -1411,4 +1401,174 @@ html, body { background: #fff; }
   .workspace-shell { height: max(760px, calc(100vh + 100px)); min-height: 0; }
   .filter-rail:not(.is-expanded) .rail-search { display: none; }
   .filter-rail:not(.is-expanded) .category { grid-template-columns: 1fr; justify-items: center; }
+}
+
+/* Brand palette system for the Tienda collection. Color is used with an
+   editorial hierarchy so the report remains calm, legible and document-like. */
+.sheet.tienda-themed {
+  color: var(--tienda-deep, #081754);
+}
+.sheet.tienda-themed .sheet-title-copy .eyebrow,
+.sheet.tienda-themed .report-lead h3,
+.sheet.tienda-themed .filter-empty-state h3,
+.sheet.tienda-themed .panel-heading span,
+.sheet.tienda-themed .rank-row span,
+.sheet.tienda-themed .course-table button > span,
+.sheet.tienda-themed .people-summary span,
+.sheet.tienda-themed .person-row > span:first-child {
+  color: var(--tienda-deep, #081754);
+}
+.sheet.tienda-themed .sheet-title-copy .eyebrow,
+.sheet.tienda-themed .filter-empty-state > span,
+.sheet.tienda-themed .metric-grid span,
+.sheet.tienda-themed .people-table-head {
+  color: var(--tienda-secondary, #1C42E8);
+}
+.sheet.tienda-themed .report-lead p {
+  color: color-mix(in srgb, var(--tienda-deep, #081754) 82%, white);
+}
+.sheet.tienda-themed .report-lead small,
+.sheet.tienda-themed .metric-grid small,
+.sheet.tienda-themed .panel-heading small,
+.sheet.tienda-themed .bar-column em,
+.sheet.tienda-themed .bar-column small,
+.sheet.tienda-themed .course-table button small,
+.sheet.tienda-themed .people-summary small,
+.sheet.tienda-themed .person-row,
+.sheet.tienda-themed .person-row small,
+.sheet.tienda-themed .filter-empty-state p,
+.sheet.tienda-themed .comments-empty,
+.sheet.tienda-themed .tienda-confidentiality {
+  color: color-mix(in srgb, var(--tienda-deep, #081754) 58%, white);
+}
+.sheet.tienda-themed .metric-grid {
+  border-color: color-mix(in srgb, var(--tienda-deep, #081754) 16%, white);
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--tienda-deep, #081754) 7%, transparent);
+}
+.sheet.tienda-themed .metric-grid article {
+  border-color: color-mix(in srgb, var(--tienda-deep, #081754) 13%, white);
+  background: color-mix(in srgb, var(--tienda-accent, #F0D224) 4%, white);
+}
+.sheet.tienda-themed .metric-grid article:hover {
+  background: color-mix(in srgb, var(--tienda-accent, #F0D224) 9%, white);
+}
+.sheet.tienda-themed .metric-grid strong,
+.sheet.tienda-themed .panel-heading b,
+.sheet.tienda-themed .rank-row strong,
+.sheet.tienda-themed .course-table button > strong {
+  color: var(--tienda-deep, #081754);
+}
+.sheet.tienda-themed .panel {
+  border-color: color-mix(in srgb, var(--tienda-deep, #081754) 17%, white);
+}
+.sheet.tienda-themed .bar-column div {
+  background: linear-gradient(180deg, var(--tienda-secondary, #1C42E8), var(--tienda-accent, #F0D224));
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--tienda-secondary, #1C42E8) 18%, transparent);
+}
+.sheet.tienda-themed .bar-column:nth-child(even) div {
+  background: linear-gradient(180deg, var(--tienda-deep, #081754), var(--tienda-secondary, #1C42E8));
+}
+.sheet.tienda-themed .rank-row {
+  border-color: color-mix(in srgb, var(--tienda-deep, #081754) 12%, white);
+}
+.sheet.tienda-themed .rank-row b {
+  color: var(--tienda-secondary, #1C42E8);
+}
+.sheet.tienda-themed .course-table,
+.sheet.tienda-themed .people-table,
+.sheet.tienda-themed .people-summary {
+  border-color: color-mix(in srgb, var(--tienda-deep, #081754) 15%, white);
+}
+.sheet.tienda-themed .course-table button,
+.sheet.tienda-themed .person-row {
+  border-color: color-mix(in srgb, var(--tienda-deep, #081754) 11%, white);
+}
+.sheet.tienda-themed .course-table button:hover,
+.sheet.tienda-themed .person-row:hover {
+  background: color-mix(in srgb, var(--tienda-accent, #F0D224) 8%, white);
+}
+.sheet.tienda-themed .course-table button > i {
+  background: color-mix(in srgb, var(--tienda-secondary, #1C42E8) 13%, white);
+}
+.sheet.tienda-themed .course-table button > i b {
+  background: linear-gradient(90deg, var(--tienda-secondary, #1C42E8), var(--tienda-accent, #F0D224));
+}
+.sheet.tienda-themed .show-more-button {
+  border-color: transparent;
+  background: var(--tienda-action, #1C42E8);
+  color: white;
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--tienda-action, #1C42E8) 22%, transparent);
+}
+.sheet.tienda-themed .show-more-button:hover {
+  background: var(--tienda-deep, #081754);
+  color: white;
+  transform: translateY(-1px);
+}
+.sheet.tienda-themed .show-more-button .more-icon-shell {
+  background: rgba(255,255,255,.17);
+  color: white;
+}
+.sheet.tienda-themed .people-summary,
+.sheet.tienda-themed .people-table-head {
+  background: color-mix(in srgb, var(--tienda-accent, #F0D224) 8%, white);
+}
+.sheet.tienda-themed .floating-toolbar-frame::before {
+  background: color-mix(in srgb, var(--tienda-accent, #F0D224) 8%, rgba(248,248,250,.96));
+}
+.sheet.tienda-themed .toolbar-popup-trigger:hover,
+.sheet.tienda-themed .toolbar-popup-filter.open .toolbar-popup-trigger,
+.sheet.tienda-themed .sheet-toolbar .position-filter summary:hover,
+.sheet.tienda-themed .sheet-toolbar .position-filter.is-open summary {
+  background: color-mix(in srgb, var(--tienda-accent, #F0D224) 12%, white);
+  color: var(--tienda-deep, #081754);
+}
+.sheet.tienda-themed .toolbar-popup-options button.active {
+  color: var(--tienda-deep, #081754);
+  background: color-mix(in srgb, var(--tienda-accent, #F0D224) 10%, white);
+}
+.sheet.tienda-themed .toolbar-popup-options button.active i {
+  background: var(--tienda-secondary, #1C42E8);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tienda-secondary, #1C42E8) 14%, transparent);
+}
+.sheet.tienda-themed .toolbar-people:hover,
+.sheet.tienda-themed .toolbar-people.active {
+  background: var(--tienda-action, #1C42E8);
+  color: white;
+}
+.sheet.tienda-themed .filter-empty-state {
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--tienda-accent, #F0D224) 5%, white);
+}
+.sheet.tienda-themed .tienda-confidentiality {
+  border-color: color-mix(in srgb, var(--tienda-secondary, #1C42E8) 25%, white);
+}
+.sheet.tienda-themed .report-lead h3,
+.sheet.tienda-themed .report-lead p,
+.sheet.tienda-themed .report-lead small,
+.sheet.tienda-themed .metric-grid,
+.sheet.tienda-themed .metric-grid article,
+.sheet.tienda-themed .metric-grid span,
+.sheet.tienda-themed .metric-grid strong,
+.sheet.tienda-themed .metric-grid small,
+.sheet.tienda-themed .panel,
+.sheet.tienda-themed .panel-heading span,
+.sheet.tienda-themed .panel-heading small,
+.sheet.tienda-themed .panel-heading b,
+.sheet.tienda-themed .bar-column div,
+.sheet.tienda-themed .rank-row,
+.sheet.tienda-themed .rank-row b,
+.sheet.tienda-themed .rank-row span,
+.sheet.tienda-themed .rank-row strong,
+.sheet.tienda-themed .course-table,
+.sheet.tienda-themed .course-table button,
+.sheet.tienda-themed .course-table button > i,
+.sheet.tienda-themed .course-table button > i b,
+.sheet.tienda-themed .show-more-button,
+.sheet.tienda-themed .people-summary,
+.sheet.tienda-themed .people-table,
+.sheet.tienda-themed .people-table-head,
+.sheet.tienda-themed .person-row,
+.sheet.tienda-themed .filter-empty-state,
+.sheet.tienda-themed .tienda-confidentiality {
+  transition: color .32s ease, background .32s ease, background-color .32s ease, border-color .32s ease, box-shadow .32s ease, transform .2s ease;
 }

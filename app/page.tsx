@@ -18,12 +18,12 @@ type CategoryOption = { key: string; label: string; history?: Record<string, Per
 const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerente_zona"];
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const tiendaAccentOptions = [
-  { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", swatch: "linear-gradient(90deg, #F0D224, #1C42E8 55%, #081754)" },
-  { key: "sky", label: "Cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", swatch: "linear-gradient(90deg, #1CA8F7, #1C42E8 55%, #081754)" },
-  { key: "nature", label: "Naturaleza", accent: "#F0D224", secondary: "#0ABF4F", deep: "#005E3E", swatch: "linear-gradient(90deg, #F0D224, #0ABF4F 55%, #005E3E)" },
-  { key: "creative", label: "Creativa", accent: "#FDA1FB", secondary: "#7D42FF", deep: "#4C04B2", swatch: "linear-gradient(90deg, #FDA1FB, #7D42FF 55%, #4C04B2)" },
-  { key: "warm", label: "Cálida", accent: "#F0D224", secondary: "#FFAE43", deep: "#FF594D", swatch: "linear-gradient(90deg, #F0D224, #FFAE43 55%, #FF594D)" },
-  { key: "earth", label: "Tierra", accent: "#B99B7B", secondary: "#EEE8E3", deep: "#66451D", swatch: "linear-gradient(90deg, #EEE8E3, #B99B7B 55%, #66451D)" },
+  { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224, #1C42E8 55%, #081754)" },
+  { key: "sky", label: "Cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #1CA8F7, #1C42E8 55%, #081754)" },
+  { key: "nature", label: "Naturaleza", accent: "#88FF4D", secondary: "#0ABF4F", deep: "#005E3E", action: "#005E3E", swatch: "linear-gradient(90deg, #88FF4D, #0ABF4F 55%, #005E3E)" },
+  { key: "creative", label: "Creativa", accent: "#FDA1FB", secondary: "#7D42FF", deep: "#4C04B2", action: "#4C04B2", swatch: "linear-gradient(90deg, #FDA1FB, #7D42FF 55%, #4C04B2)" },
+  { key: "warm", label: "Cálida", accent: "#FFAE43", secondary: "#FF594D", deep: "#7A2627", action: "#7A2627", swatch: "linear-gradient(90deg, #FFAE43, #FF594D 55%, #7A2627)" },
+  { key: "earth", label: "Tierra", accent: "#EEE8E3", secondary: "#B99B7B", deep: "#66451D", action: "#66451D", swatch: "linear-gradient(90deg, #EEE8E3, #B99B7B 55%, #66451D)" },
 ];
 
 function textKey(value: string) {
@@ -579,19 +579,10 @@ export default function Home() {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent, "--tienda-secondary": tiendaAccent.secondary, "--tienda-deep": tiendaAccent.deep } as CSSProperties : undefined}>
+          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent, "--tienda-secondary": tiendaAccent.secondary, "--tienda-deep": tiendaAccent.deep, "--tienda-action": tiendaAccent.action } as CSSProperties : undefined}>
             <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
-                <div className="tienda-letterhead-logo" role="img" aria-label="Coppel Universidad Corporativa · Academia de Ventas">
-                  <div className="coppel-brand-block">
-                    <span className="coppel-dots" aria-hidden="true"><i /><i /><i /></span>
-                    <strong>Coppel</strong>
-                    <span>Universidad</span>
-                    <span>Corporativa</span>
-                  </div>
-                  <i className="brand-divider" aria-hidden="true" />
-                  <div className="sales-academy-name"><span>Academia</span><span>de Ventas</span></div>
-                </div>
+                <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
                 <div className={accentPickerOpen ? "tienda-accent-picker is-open" : "tienda-accent-picker"}>
                   <div className="accent-options" aria-hidden={!accentPickerOpen}>
                     <div>{tiendaAccentOptions.map((option) => <button
