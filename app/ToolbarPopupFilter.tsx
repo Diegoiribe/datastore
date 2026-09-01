@@ -18,18 +18,19 @@ export function useDelayedPanelClose(onClose: () => void) {
   return { cancelClose, scheduleClose };
 }
 
-export default function ToolbarPopupFilter({ label, value, options, open, onOpenChange, onChange }: {
+export default function ToolbarPopupFilter({ label, value, options, open, className = "", onOpenChange, onChange }: {
   label: string;
   value?: string;
   options: ToolbarPopupOption[];
   open: boolean;
+  className?: string;
   onOpenChange(open: boolean): void;
   onChange(value: string): void;
 }) {
   const selected = options.find((option) => option.value === value);
   const { cancelClose, scheduleClose } = useDelayedPanelClose(() => onOpenChange(false));
   return <div
-    className={open ? "toolbar-popup-filter open" : "toolbar-popup-filter"}
+    className={`toolbar-popup-filter${open ? " open" : ""}${className ? ` ${className}` : ""}`}
     onMouseEnter={cancelClose}
     onMouseLeave={scheduleClose}
     onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onOpenChange(false); }}
