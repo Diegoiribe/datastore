@@ -299,10 +299,18 @@ html, body { background: #fff; }
 .sheet-title { display: block; }
 .sheet-title h2 { max-width: 650px; margin-top: 14px; font-size: clamp(39px, 4vw, 54px); font-weight: 680; line-height: 1.04; }
 .sheet-title.tienda-letterhead { display: block; }
-.tienda-letterhead-logo { width: min(250px, 54%); height: 64px; margin: -46px 0 48px -24px; overflow: hidden; background: transparent; }
+.tienda-letterhead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin: -46px 0 48px -24px; }
+.tienda-letterhead-logo { width: min(250px, 54%); height: 64px; overflow: hidden; background: transparent; }
 .tienda-letterhead-logo img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: left center; }
+.tienda-accent-picker { min-width: 44px; min-height: 44px; display: flex; justify-content: flex-end; gap: 7px; padding: 5px; border-radius: 999px; background: #fff; box-shadow: 0 8px 24px rgba(39, 28, 31, .11); transition: box-shadow .2s ease; }
+.tienda-accent-picker.is-open { box-shadow: 0 10px 28px rgba(39, 28, 31, .14); }
+.accent-swatch { width: 34px; height: 34px; flex: 0 0 34px; padding: 0; border: 3px solid transparent; border-radius: 50%; background-clip: padding-box !important; box-shadow: none; cursor: pointer; transition: transform .18s ease, box-shadow .18s ease; }
+.accent-swatch:hover { transform: scale(1.06); }
+.accent-swatch:focus-visible { outline: 2px solid #1d1d1f; outline-offset: 3px; }
+.accent-swatch.is-selected { box-shadow: 0 0 0 3px #ececef; }
+.accent-toggle { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, .92); }
 .tienda-letterhead .sheet-title-copy { position: relative; min-width: 0; margin: 0; padding: 0; container-type: inline-size; }
-.tienda-letterhead .sheet-title-copy::before { position: absolute; top: -6px; bottom: -6px; left: -24px; width: 4px; background: #f8d31c; content: ""; }
+.tienda-letterhead .sheet-title-copy::before { position: absolute; top: -6px; bottom: -6px; left: -24px; width: 4px; background: var(--tienda-accent, #f8d31c); content: ""; transition: background .24s ease; }
 .tienda-letterhead .sheet-title-copy h2 { max-width: none; font-size: clamp(22px, 6.15cqi, 42px); letter-spacing: -.055em; white-space: nowrap; }
 .tienda-confidentiality { margin-top: 92px; padding: 24px 0 2px; border-top: 1px solid #d8d8dd; color: #77777d; font-size: 8px; font-weight: 520; line-height: 1.65; }
 .tienda-confidentiality strong { font-weight: 650; }
@@ -450,7 +458,7 @@ html, body { background: #fff; }
   .filter-rail { width: 230px; }
   .filter-rail.is-expanded { width: 360px; }
   .sheet { width: calc(100% - 36px); padding: 62px 46px 76px; }
-  .tienda-letterhead-logo { margin-top: -34px; }
+  .tienda-letterhead-top { margin-top: -34px; }
   .sheet-toolbar { position: relative; top: auto; width: 100%; margin: 28px 0 45px; overflow-x: auto; }
   .dashboard-grid { grid-template-columns: 1fr; }
 }
@@ -464,7 +472,11 @@ html, body { background: #fff; }
   .filter-rail { width: 68px; min-height: 100vh; border-radius: 0; }
   .filter-rail.is-expanded { position: fixed; inset: 0 auto 0 0; z-index: 20; width: min(92vw, 430px); overflow-y: auto; }
   .sheet { width: calc(100% - 20px); margin: 10px 10px 50px; padding: 48px 25px 60px; }
-  .tienda-letterhead-logo { width: min(220px, 72%); height: 56px; margin: -24px 0 38px -14px; }
+  .tienda-letterhead-top { gap: 14px; margin: -24px 0 38px -14px; }
+  .tienda-letterhead-logo { width: min(220px, 72%); height: 56px; }
+  .tienda-accent-picker { min-width: 38px; min-height: 38px; gap: 5px; padding: 4px; }
+  .accent-swatch { width: 30px; height: 30px; flex-basis: 30px; }
+  .tienda-accent-picker.is-open { max-width: 170px; flex-wrap: wrap; }
   .tienda-letterhead .sheet-title-copy::before { left: -14px; width: 3px; }
   .tienda-letterhead .sheet-title-copy h2 { font-size: clamp(20px, 6.15cqi, 32px); }
   .metric-grid { grid-template-columns: 1fr; }

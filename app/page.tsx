@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   CategoryDashboard,
   MetricRow,
@@ -17,6 +17,14 @@ type CategoryOption = { key: string; label: string; history?: Record<string, Per
 
 const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerente_zona"];
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
+const tiendaAccentOptions = [
+  { key: "sunset", label: "Atardecer", accent: "#ff8da1", swatch: "linear-gradient(135deg, #ff7fb2, #ffc18a)" },
+  { key: "rose", label: "Rosa", accent: "#f277a5", swatch: "linear-gradient(135deg, #f66ead, #ffb092)" },
+  { key: "yellow", label: "Amarillo", accent: "#f8d31c", swatch: "linear-gradient(135deg, #ffd928, #ffc837)" },
+  { key: "orange", label: "Naranja", accent: "#f3a15e", swatch: "linear-gradient(135deg, #c9b08b, #ff9b6c)" },
+  { key: "blush", label: "Rubor", accent: "#d98791", swatch: "linear-gradient(135deg, #9c7b7f, #ffaaa5)" },
+  { key: "peach", label: "Durazno", accent: "#ff9e9e", swatch: "linear-gradient(135deg, #ffb47f, #f8a0cf)" },
+];
 
 function textKey(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, " ").trim();
@@ -185,6 +193,8 @@ export default function Home() {
   const [pendingError, setPendingError] = useState("");
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [showAllCourses, setShowAllCourses] = useState(false);
+  const [tiendaAccent, setTiendaAccent] = useState(tiendaAccentOptions[2]);
+  const [accentPickerOpen, setAccentPickerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [usingDemo, setUsingDemo] = useState(true);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
@@ -570,8 +580,28 @@ export default function Home() {
 
         <div className="report-scroll" ref={reportScrollRef}>
           <article className={loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"} ref={reportSheetRef}>
-            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"}>
-              {openBook === "tienda" && <div className="tienda-letterhead-logo"><img src="/academia-ventas-logo-black.png" alt="Universidad Corporativa Coppel · Programas Académicos" /></div>}
+            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent } as CSSProperties : undefined}>
+              {openBook === "tienda" && <div className="tienda-letterhead-top">
+                <div className="tienda-letterhead-logo"><img src="/academia-ventas-logo-black.png" alt="Universidad Corporativa Coppel · Programas Académicos" /></div>
+                <div className={accentPickerOpen ? "tienda-accent-picker is-open" : "tienda-accent-picker"}>
+                  {accentPickerOpen ? tiendaAccentOptions.map((option) => <button
+                    type="button"
+                    key={option.key}
+                    className={option.key === tiendaAccent.key ? "accent-swatch is-selected" : "accent-swatch"}
+                    style={{ background: option.swatch }}
+                    aria-label={`Usar color ${option.label}`}
+                    aria-pressed={option.key === tiendaAccent.key}
+                    onClick={() => { setTiendaAccent(option); setAccentPickerOpen(false); }}
+                  />) : <button
+                    type="button"
+                    className="accent-swatch accent-toggle"
+                    style={{ background: tiendaAccent.swatch }}
+                    aria-label="Mostrar colores del membrete"
+                    aria-expanded="false"
+                    onClick={() => setAccentPickerOpen(true)}
+                  />}
+                </div>
+              </div>}
               <div className="sheet-title-copy"><span className="eyebrow">{reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
