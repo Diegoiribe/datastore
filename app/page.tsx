@@ -570,8 +570,9 @@ export default function Home() {
 
         <div className="report-scroll" ref={reportScrollRef}>
           <article className={loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"} ref={reportSheetRef}>
-            <header className="sheet-title">
-              <div><span className="eyebrow">{reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span><h2>{reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"}>
+              {openBook === "tienda" && <div className="tienda-letterhead-logo"><img src="/academia-ventas-logo.png" alt="Universidad Corporativa Coppel" /></div>}
+              <div className="sheet-title-copy"><span className="eyebrow">{reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
             {loading && tiendaPeriodReady ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
@@ -653,6 +654,7 @@ export default function Home() {
                 <div className="people-table"><div className="people-table-head"><span>Colaborador</span><span>Puesto</span><span>Región</span><span>Curso pendiente</span></div>{visiblePending.slice(0, 100).map((person, index) => <div className="person-row" key={`${person.numero_persona}-${person.curso}-${index}`}><span><b>{person.nombre}</b><small>{person.numero_persona} · Tienda {person.tienda ?? "—"}</small></span><span>{person.puesto}</span><span>{person.region}</span><span>{person.curso}</span></div>)}</div>
               </section>
             )}</>}
+            {openBook === "tienda" && <footer className="tienda-confidentiality"><strong>La información contenida en la totalidad de este documento constituye un secreto de marca y/o información de Grupo Coppel; y deberá tratarse de acuerdo con las Decisiones, Políticas y Procesos vigentes en la organización.</strong></footer>}
             </div>}
           </article>
         </div>
