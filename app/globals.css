@@ -876,6 +876,8 @@ html, body { background: #fff; }
 /* Satisfaction palettes. Semantic success/warning/error colors remain stable;
    the chosen palette controls hierarchy, charts, selections and surfaces. */
 .sheet.survey-themed { --survey-accent: #1d1d1f; --survey-secondary: #8e8e93; --survey-deep: #000; --survey-action: #3a3a3c; }
+.sheet-title.survey-letterhead { position: relative; padding-right: 48px; }
+.survey-letterhead > .tienda-accent-picker { position: absolute; top: 0; right: 0; }
 .sheet.survey-themed .sheet-title-copy .eyebrow { color: var(--survey-action); transition: color .24s ease; }
 .sheet.survey-themed .sheet-title-copy h2,
 .sheet.survey-themed .survey-lead h3,
@@ -1495,8 +1497,10 @@ html, body { background: #fff; }
 .workspace-shell.reader-mode .filter-rail { width: 0; padding-right: 0; padding-left: 0; overflow: hidden; border-right: 0; opacity: 0; pointer-events: none; }
 .workspace-shell.reader-mode .report-space { width: 100%; border-radius: 26px; }
 .workspace-shell.reader-mode .reader-mode-restore { display: grid; }
+.workspace-shell.reader-mode .report-scroll { overflow-x: auto; }
 .workspace-shell.reader-mode .sheet {
-  width: min(860px, calc((100% - 64px) * .666667));
+  width: 860px;
+  max-width: none;
   margin-top: 32px;
   margin-bottom: 120px;
   zoom: 1.5;

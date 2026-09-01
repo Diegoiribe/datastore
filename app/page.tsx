@@ -673,7 +673,7 @@ export default function Home() {
 
         <div className="report-scroll" ref={reportScrollRef}>
           <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent, "--tienda-secondary": tiendaAccent.secondary, "--tienda-deep": tiendaAccent.deep, "--tienda-action": tiendaAccent.action } as CSSProperties : activeSurvey ? { "--survey-accent": surveyAccent.accent, "--survey-secondary": surveyAccent.secondary, "--survey-deep": surveyAccent.deep, "--survey-action": surveyAccent.action } as CSSProperties : undefined}>
-            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"}>
+            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : activeSurvey ? "sheet-title survey-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
                 <AccentPicker value={tiendaAccent} open={accentPickerOpen} onOpenChange={setAccentPickerOpen} onChange={setTiendaAccent} label="Mostrar paletas del membrete" />
