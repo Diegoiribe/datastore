@@ -14,11 +14,15 @@ import SatisfactionReport from "./SatisfactionReport";
 
 type CategoryOption = { key: string; label: string; history?: Record<string, PeriodSummary> };
 
+const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerente_zona"];
+const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
+
 function textKey(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 function reportFamily(category: CategoryOption) {
+  if (category.key === "tienda") return { label: "Colección", description: "Cinco capítulos del equipo de Tienda" };
   if (category.key === "encuesta_de_satisfaccion") return { label: "Experiencia", description: "Satisfacción, recomendación y voz del participante" };
   if (category.key === "staff") return { label: "Talento", description: "Seguimiento de capacitación corporativa" };
   return { label: "Avance", description: "Cumplimiento, asignaciones y cursos pendientes" };
@@ -42,13 +46,15 @@ function latestSharedPeriod(items: CategoryOption[]) {
 
 const ReportCover = memo(function ReportCover({ category, compact = false }: { category: CategoryOption; compact?: boolean }) {
   const family = reportFamily(category);
-  const artwork = {
+  const coverArtwork = {
     almacenista: "/report-covers/almacenista-v2.png",
     asesor: "/report-covers/asesor-v1.png",
     cajero: "/report-covers/cajero-v2.png",
     encuesta_de_satisfaccion: "/report-covers/encuesta-satisfaccion-v2.png",
     gerente: "/report-covers/gerente-v1.png",
+    tienda: "/report-covers/asesor-v1.png",
   }[category.key] ?? null;
+  const artwork = compact && tiendaChapterKeys.includes(category.key) ? null : coverArtwork;
   return <span className={`report-cover ${compact ? "compact " : ""}${artwork ? `has-artwork artwork-${category.key}` : `tone-${reportTone(category.key)}`}`} style={artwork ? { backgroundImage: `url(${artwork})` } : undefined} aria-hidden="true">
     <span className="cover-rule" />
     <small>{family.label}</small>
@@ -57,6 +63,15 @@ const ReportCover = memo(function ReportCover({ category, compact = false }: { c
     <em>Universidad Corporativa Coppel</em>
   </span>;
 });
+
+function TiendaBookCover({ compact = false }: { compact?: boolean }) {
+  return <span className={compact ? "tienda-book-cover compact" : "tienda-book-cover"}>
+    <ReportCover category={tiendaCategory} compact={compact} />
+    <span className="book-index-tabs" aria-hidden="true">
+      {tiendaChapterKeys.map((key, index) => <i key={key}>{String(index + 1).padStart(2, "0")}</i>)}
+    </span>
+  </span>;
+}
 
 function LibraryFooter() {
   return <footer className="library-footer">
@@ -113,21 +128,84 @@ function groupMetrics(rows: MetricRow[], key: "region" | "curso") {
   return [...groups].map(([label, values]) => ({ label, ...sumRows(values) })).sort((a, b) => b.progress - a.progress);
 }
 
-function SelectFilter({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange(value: string): void }) {
+function SelectFilter({ label, allLabel = label, value, options, onChange }: { label: string; allLabel?: string; value: string; options: string[]; onChange(value: string): void }) {
   return (
     <label className="select-filter">
       <span>{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="all">Todos</option>
+        <option value="all">{allLabel}</option>
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
     </label>
   );
 }
 
+function useDelayedPanelClose(onClose: () => void) {
+  const closeTimer = useRef<number | null>(null);
+  const cancelClose = () => {
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(onClose, 240);
+  };
+  useEffect(() => cancelClose, []);
+  return { cancelClose, scheduleClose };
+}
+
+function PositionFilterMenu({ open, positions, options, onOpenChange, onToggle }: {
+  open: boolean;
+  positions: string[];
+  options: string[];
+  onOpenChange(open: boolean): void;
+  onToggle(value: string): void;
+}) {
+  const { cancelClose, scheduleClose } = useDelayedPanelClose(() => onOpenChange(false));
+  return <details
+    className="position-filter"
+    open={open}
+    onMouseEnter={cancelClose}
+    onMouseLeave={scheduleClose}
+    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onOpenChange(false); }}
+  >
+    <summary onClick={(event) => { event.preventDefault(); onOpenChange(!open); }}>Puestos {positions.length ? `· ${positions.length}` : ""}</summary>
+    <div>{options.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => onToggle(item)} />{item}</label>)}</div>
+  </details>;
+}
+
+function PopupFilter({ label, value, options, open, onOpenChange, onChange }: {
+  label: string;
+  value?: string;
+  options: Array<{ value: string; label: string }>;
+  open: boolean;
+  onOpenChange(open: boolean): void;
+  onChange(value: string): void;
+}) {
+  const selected = options.find((option) => option.value === value);
+  const { cancelClose, scheduleClose } = useDelayedPanelClose(() => onOpenChange(false));
+  return <div
+    className={open ? "toolbar-popup-filter open" : "toolbar-popup-filter"}
+    onMouseEnter={cancelClose}
+    onMouseLeave={scheduleClose}
+    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onOpenChange(false); }}
+  >
+    <button type="button" className="toolbar-popup-trigger" onClick={() => onOpenChange(!open)} aria-haspopup="listbox" aria-expanded={open}>
+      <span>{selected?.label ?? label}</span><i aria-hidden="true" />
+    </button>
+    {open && <div className="toolbar-popup-options" role="listbox" aria-label={label}>
+      <div className="toolbar-popup-scroll">
+        {options.length ? options.map((option) => <button type="button" key={option.value} className={option.value === value ? "active" : ""} onClick={() => { onChange(option.value); onOpenChange(false); }} role="option" aria-selected={option.value === value}><span>{option.label}</span><i aria-hidden="true" /></button>) : <p>Sin opciones disponibles.</p>}
+      </div>
+    </div>}
+  </div>;
+}
+
 export default function Home() {
   const [categories, setCategories] = useState(fallbackCategories);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [openBook, setOpenBook] = useState<string | null>(null);
+  const [bookExpanded, setBookExpanded] = useState(false);
   const [reportQuery, setReportQuery] = useState("");
   const [dashboards, setDashboards] = useState<CategoryDashboard[]>([]);
   const [year, setYear] = useState("2026");
@@ -135,8 +213,13 @@ export default function Home() {
   const [region, setRegion] = useState("all");
   const [course, setCourse] = useState("all");
   const [positions, setPositions] = useState<string[]>([]);
+  const [yearFilterChosen, setYearFilterChosen] = useState(false);
+  const [monthFilterChosen, setMonthFilterChosen] = useState(false);
+  const [positionMenuOpen, setPositionMenuOpen] = useState(false);
+  const [openFilterMenu, setOpenFilterMenu] = useState<string | null>(null);
   const [peopleMode, setPeopleMode] = useState(false);
   const [nameQuery, setNameQuery] = useState("");
+  const [peopleSearchOpen, setPeopleSearchOpen] = useState(false);
   const [pendingRows, setPendingRows] = useState<PendingRow[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [pendingError, setPendingError] = useState("");
@@ -232,19 +315,33 @@ export default function Home() {
   }, [period, selectedCategories]);
 
   const activeSurvey = dashboards.length === 1 && dashboards[0].dataKind === "satisfaction" ? dashboards[0] : null;
+  const tiendaChapters = useMemo(
+    () => tiendaChapterKeys.map((key) => categories.find((category) => category.key === key)).filter((category): category is CategoryOption => Boolean(category)),
+    [categories],
+  );
+  const libraryReports = useMemo(() => {
+    const standalone = categories.filter((category) => !tiendaChapterKeys.includes(category.key));
+    return tiendaChapters.length ? [tiendaCategory, ...standalone] : standalone;
+  }, [categories, tiendaChapters.length]);
   const filteredReports = useMemo(() => {
     const query = textKey(reportQuery);
-    return query ? categories.filter((category) => {
+    return query ? libraryReports.filter((category) => {
       const family = reportFamily(category);
-      return textKey(`${category.label} ${family.label} ${family.description}`).includes(query);
-    }) : categories;
-  }, [categories, reportQuery]);
+      const chapterLabels = category.key === "tienda" ? tiendaChapters.map((chapter) => chapter.label).join(" ") : "";
+      return textKey(`${category.label} ${family.label} ${family.description} ${chapterLabels}`).includes(query);
+    }) : libraryReports;
+  }, [libraryReports, reportQuery, tiendaChapters]);
+  const visibleChapters = useMemo(() => {
+    const query = textKey(reportQuery);
+    return query ? tiendaChapters.filter((category) => textKey(category.label).includes(query)) : tiendaChapters;
+  }, [reportQuery, tiendaChapters]);
   const selectedReportOptions = useMemo(
     () => categories.filter((item) => selectedCategories.includes(item.key)),
     [categories, selectedCategories],
   );
   const selectedCategory = selectedReportOptions[0] ?? categories[0];
   const reportIsSurvey = selectedCategory?.key === "encuesta_de_satisfaccion";
+  const tiendaPeriodReady = openBook !== "tienda" || (yearFilterChosen && monthFilterChosen);
   const sourceMetrics = useMemo<MetricRow[]>(() => !selectedCategories.length
     ? []
     : dashboards.filter((item) => item.dataKind !== "satisfaction").flatMap((item) => item.metrics as MetricRow[]),
@@ -284,6 +381,11 @@ export default function Home() {
     setRegion("all");
     setCourse("all");
     setNameQuery("");
+    setYearFilterChosen(false);
+    setMonthFilterChosen(false);
+    setPositionMenuOpen(false);
+    setOpenFilterMenu(null);
+    setPeopleSearchOpen(false);
     setShowAllRegions(false);
     setShowAllCourses(false);
   };
@@ -319,6 +421,22 @@ export default function Home() {
     setSelectedCategories(nextSelection);
     if (!switchingReport) window.scrollTo({ top: 0, behavior: "auto" });
   };
+  const openTiendaBook = () => {
+    const firstChapter = tiendaChapters[0];
+    if (!firstChapter) return;
+    resetCategoryFilters();
+    setReportQuery("");
+    setOpenBook("tienda");
+    setBookExpanded(false);
+    selectCategory(firstChapter.key);
+  };
+  const selectLibraryReport = (key: string) => {
+    if (key === "tienda") openTiendaBook();
+    else {
+      setOpenBook(null);
+      selectCategory(key);
+    }
+  };
   const returnToLibrary = () => {
     resetCategoryFilters();
     setReportQuery("");
@@ -326,11 +444,29 @@ export default function Home() {
     setUsingDemo(true);
     setLoading(false);
     setSelectedCategories([]);
+    setOpenBook(null);
+    setBookExpanded(false);
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
   const togglePosition = (value: string) => {
     setPositions((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  };
+  const openPeopleMode = () => {
+    setPositions([]);
+    setRegion("all");
+    setCourse("all");
+    setNameQuery("");
+    setPositionMenuOpen(false);
+    setOpenFilterMenu(null);
+    setPeopleSearchOpen(false);
+    setPeopleMode(true);
+  };
+  const closePeopleMode = () => {
+    setPeopleSearchOpen(false);
+    setPositionMenuOpen(false);
+    setOpenFilterMenu(null);
+    setPeopleMode(false);
   };
 
   const loadPeople = useCallback(async () => {
@@ -365,6 +501,7 @@ export default function Home() {
     (course === "all" || row.curso === course) &&
     (!positions.length || positions.includes(row.puesto)),
   );
+  const peopleSuggestions = visiblePending.slice(0, 8);
 
   const selectedLabel = selectedReportOptions.length > 2
     ? `${selectedReportOptions.length} reportes de ${reportFamily(selectedReportOptions[0]).label}`
@@ -376,12 +513,12 @@ export default function Home() {
       ? "No se encontraron datos publicados para los filtros seleccionados"
       : `Última sincronización: ${lastSyncAt?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) ?? "ahora"}`;
 
-  if (!selectedCategories.length) {
+  if (!selectedCategories.length && !openBook) {
     return <div className="site-page library-page">
       <header className="site-header library-header">
         <UniversityBrand onClick={() => undefined} />
         <strong className="header-section-title">Reportes</strong>
-        <span className="library-count">{categories.length.toLocaleString("es-MX")} reportes</span>
+        <span className="library-count">{libraryReports.length.toLocaleString("es-MX")} reportes</span>
       </header>
       <section className="library-hero">
         <span>UNIVERSIDAD CORPORATIVA COPPEL</span>
@@ -393,8 +530,8 @@ export default function Home() {
         <header><div><span>Todos los reportes</span><small>Publicados por la Universidad Corporativa</small></div><b>{filteredReports.length}</b></header>
         {filteredReports.length ? <div className="book-library-grid">{filteredReports.map((category, index) => {
           const family = reportFamily(category);
-          return <button className="book-card" key={category.key} onClick={() => selectCategory(category.key)} style={{ animationDelay: `${index * 45}ms` }}>
-            <ReportCover category={category} />
+          return <button className={category.key === "tienda" ? "book-card collection" : "book-card"} key={category.key} onClick={() => selectLibraryReport(category.key)} style={{ animationDelay: `${index * 45}ms` }}>
+            {category.key === "tienda" ? <TiendaBookCover /> : <ReportCover category={category} />}
             <span className="book-card-copy"><span className="report-family-tag">{family.label}</span><strong>{category.label}</strong><small>{family.description}</small></span>
           </button>;
         })}</div> : <section className="library-empty"><strong>No encontramos ese reporte.</strong><span>Prueba con otro nombre o con una familia como “Avance” o “Experiencia”.</span></section>}
@@ -432,58 +569,93 @@ export default function Home() {
         <label className="rail-search"><i aria-hidden="true">⌕</i><input value={reportQuery} onChange={(event) => setReportQuery(event.target.value)} placeholder="Buscar reporte" /></label>
         <div className="rail-section-title"><span>Reportes</span><small>{filteredReports.length}</small></div>
         <nav className="category-list" aria-label="Categorías del reporte">
-          {filteredReports.map((category) => (
-            <button
-              className={selectedCategories.includes(category.key) ? "category active" : "category"}
-              key={category.key}
-              onClick={() => selectCategory(category.key)}
-              onContextMenu={(event) => { event.preventDefault(); selectCategory(category.key, true); }}
-              aria-pressed={selectedCategories.includes(category.key)}
-              title="Clic izquierdo para cambiar · clic derecho para combinar"
-            >
-              <ReportCover category={category} compact />
-              <span className="category-copy"><span>{category.label}</span><small>{reportFamily(category).label}</small></span>
-            </button>
-          ))}
+          {filteredReports.map((category) => category.key === "tienda" ? <div className="category-collection" key={category.key}>
+              <button className="category collection-category" onClick={() => setBookExpanded((current) => !current)} aria-expanded={bookExpanded}>
+                <TiendaBookCover compact />
+                <span className="category-copy"><span>Tienda</span><small>{tiendaChapters.length} capítulos</small></span>
+              </button>
+              <div className={bookExpanded ? "chapter-subnotes open" : "chapter-subnotes"}>
+                {visibleChapters.map((chapter, index) => <button
+                  className={selectedCategories.includes(chapter.key) ? "category chapter-note active" : "category chapter-note"}
+                  key={chapter.key}
+                  onClick={() => { setOpenBook("tienda"); selectCategory(chapter.key); }}
+                  onContextMenu={(event) => { event.preventDefault(); setOpenBook("tienda"); selectCategory(chapter.key, true); }}
+                  aria-pressed={selectedCategories.includes(chapter.key)}
+                  title="Clic izquierdo para cambiar · clic derecho para combinar"
+                >
+                  <span className="chapter-note-index">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="category-copy"><span>{chapter.label}</span><small>Capítulo de Tienda</small></span>
+                </button>)}
+              </div>
+            </div> : <button
+                className={selectedCategories.includes(category.key) ? "category active" : "category"}
+                key={category.key}
+                onClick={() => { setOpenBook(null); setBookExpanded(false); selectCategory(category.key); }}
+                onContextMenu={(event) => { event.preventDefault(); selectCategory(category.key, true); }}
+                aria-pressed={selectedCategories.includes(category.key)}
+                title="Clic izquierdo para cambiar · clic derecho para combinar"
+              >
+                <ReportCover category={category} compact />
+                <span className="category-copy"><span>{category.label}</span><small>{reportFamily(category).label}</small></span>
+              </button>)}
         </nav>
 
       </aside>
 
       <section className="report-space" key={selectedCategories.join("|")}>
         <header className="topbar">
-          <div className="report-name"><ReportCover category={selectedCategory} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {period}</small></span></div>
+          <div className="report-name"><ReportCover category={selectedCategory} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {tiendaPeriodReady ? period : "Selecciona periodo"}</small></span></div>
           <span className={`status-pill ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>{syncLabel}</span>
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={loading ? "sheet is-loading" : "sheet is-ready"} ref={reportSheetRef}>
+          <article className={loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"} ref={reportSheetRef}>
             <header className="sheet-title">
               <div><span className="eyebrow">{reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span><h2>{reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
-            {loading ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
+            {loading && tiendaPeriodReady ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
             {!activeSurvey && <div className="floating-toolbar-frame"><div className={peopleMode ? "sheet-toolbar people" : "sheet-toolbar"} aria-label="Filtros del reporte">
               {peopleMode ? (
                 <>
-                  <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>
-                  <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
-                  <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
-                  <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
-                  <button className="toolbar-people active" onClick={() => setPeopleMode(false)} aria-label="Volver al reporte" title="Volver al reporte"><span className="close-icon" aria-hidden="true" /></button>
+                  {openBook === "tienda" ? <div className="people-picker">
+                    <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input value={nameQuery} onFocus={() => setPeopleSearchOpen(true)} onBlur={() => setPeopleSearchOpen(false)} onChange={(event) => { setNameQuery(event.target.value); setPeopleSearchOpen(true); }} onKeyDown={(event) => { if (event.key === "Escape") setPeopleSearchOpen(false); }} placeholder="Buscar persona" autoComplete="off" role="combobox" aria-autocomplete="list" aria-expanded={Boolean(nameQuery.trim() && peopleSearchOpen)} aria-controls="people-suggestions" /></label>
+                    {nameQuery.trim() && peopleSearchOpen && <div className="people-suggestions" id="people-suggestions" role="listbox">
+                      {loadingPending ? <p>Buscando colaboradores…</p> : pendingError ? <p>{pendingError}</p> : peopleSuggestions.length ? peopleSuggestions.map((person, index) => <button key={`${person.numero_persona}-${person.curso}-${index}`} onMouseDown={(event) => { event.preventDefault(); setNameQuery(person.nombre); setPeopleSearchOpen(false); }} role="option" aria-selected="false"><span><strong>{person.nombre}</strong><small>{person.numero_persona} · Tienda {person.tienda ?? "—"}</small></span><em>{person.curso}</em></button>) : <p>No encontramos personas con esa búsqueda.</p>}
+                    </div>}
+                  </div> : <label className="toolbar-search"><span>Buscar</span><i>⌕</i><input value={nameQuery} onChange={(event) => setNameQuery(event.target.value)} placeholder="Nombre o número de persona" /></label>}
+                  {openBook === "tienda" ? <>
+                    <PositionFilterMenu open={positionMenuOpen} positions={positions} options={availablePositions} onOpenChange={(open) => { setPositionMenuOpen(open); if (open) setOpenFilterMenu(null); }} onToggle={togglePosition} />
+                    <PopupFilter label="Región" value={region === "all" ? undefined : region} options={availableRegions.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "people-region"} onOpenChange={(open) => { setOpenFilterMenu(open ? "people-region" : null); if (open) setPositionMenuOpen(false); }} onChange={setRegion} />
+                    <PopupFilter label="Cursos" value={course === "all" ? undefined : course} options={availableCourses.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "people-course"} onOpenChange={(open) => { setOpenFilterMenu(open ? "people-course" : null); if (open) setPositionMenuOpen(false); }} onChange={setCourse} />
+                  </> : <>
+                    <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
+                    <SelectFilter label="Región" allLabel="Todos" value={region} options={availableRegions} onChange={setRegion} />
+                    <SelectFilter label="Cursos" allLabel="Todos" value={course} options={availableCourses} onChange={setCourse} />
+                  </>}
+                  <button className="toolbar-people active" onClick={openBook === "tienda" ? closePeopleMode : () => setPeopleMode(false)} aria-label="Volver al reporte" title="Volver al reporte"><span className="close-icon" aria-hidden="true" /></button>
                 </>
               ) : (
                 <>
-                  <label><span>Año</span><select value={year} onChange={(event) => setYear(event.target.value)}><option>2026</option></select></label>
-                  <label><span>Mes</span><select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item, index) => <option value={String(index + 1)} key={item}>{item}</option>)}</select></label>
-                  <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
-                  <SelectFilter label="Región" value={region} options={availableRegions} onChange={setRegion} />
-                  <SelectFilter label="Curso" value={course} options={availableCourses} onChange={setCourse} />
-                  <button className="toolbar-people" onClick={() => setPeopleMode(true)} aria-label="Buscar colaboradores" title="Buscar colaboradores">◎</button>
+                  {openBook === "tienda" ? <>
+                    <PopupFilter label="Año" value={yearFilterChosen ? year : undefined} options={[{ value: "2026", label: "2026" }]} open={openFilterMenu === "year"} onOpenChange={(open) => { setOpenFilterMenu(open ? "year" : null); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setYearFilterChosen(true); setYear(value); }} />
+                    <PopupFilter label="Mes" value={monthFilterChosen ? month : undefined} options={months.map((item, index) => ({ value: String(index + 1), label: item }))} open={openFilterMenu === "month"} onOpenChange={(open) => { setOpenFilterMenu(open ? "month" : null); if (open) setPositionMenuOpen(false); }} onChange={(value) => { setMonthFilterChosen(true); setMonth(value); }} />
+                    <PositionFilterMenu open={positionMenuOpen} positions={positions} options={availablePositions} onOpenChange={(open) => { setPositionMenuOpen(open); if (open) setOpenFilterMenu(null); }} onToggle={togglePosition} />
+                    <PopupFilter label="Región" value={region === "all" ? undefined : region} options={availableRegions.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "region"} onOpenChange={(open) => { setOpenFilterMenu(open ? "region" : null); if (open) setPositionMenuOpen(false); }} onChange={setRegion} />
+                    <PopupFilter label="Cursos" value={course === "all" ? undefined : course} options={availableCourses.map((item) => ({ value: item, label: item }))} open={openFilterMenu === "course"} onOpenChange={(open) => { setOpenFilterMenu(open ? "course" : null); if (open) setPositionMenuOpen(false); }} onChange={setCourse} />
+                  </> : <>
+                    <label><span>Año</span><select value={year} onChange={(event) => setYear(event.target.value)}><option value="2026">2026</option></select></label>
+                    <label><span>Mes</span><select value={month} onChange={(event) => setMonth(event.target.value)}>{months.map((item, index) => <option value={String(index + 1)} key={item}>{item}</option>)}</select></label>
+                    <details className="position-filter"><summary>Puestos {positions.length ? `· ${positions.length}` : ""}</summary><div>{availablePositions.map((item) => <label key={item}><input type="checkbox" checked={positions.includes(item)} onChange={() => togglePosition(item)} />{item}</label>)}</div></details>
+                    <SelectFilter label="Región" allLabel="Todos" value={region} options={availableRegions} onChange={setRegion} />
+                    <SelectFilter label="Cursos" allLabel="Todos" value={course} options={availableCourses} onChange={setCourse} />
+                  </>}
+                  <button className="toolbar-people" disabled={openBook === "tienda" && !tiendaPeriodReady} onClick={openBook === "tienda" ? openPeopleMode : () => setPeopleMode(true)} aria-label="Buscar colaboradores" title={openBook === "tienda" && !tiendaPeriodReady ? "Selecciona Año y Mes" : "Buscar colaboradores"}>◎</button>
                 </>
               )}
             </div></div>}
 
-            {activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} /> : <><section className="report-lead">
+            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} /> : <><section className="report-lead">
               <h3>{selectedLabel}</h3>
               <p>{peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde RunSQL."}</p>
               <small>{usingDemo ? "Aún no hay datos sincronizados para este periodo. Publica la información desde RunSQL." : `Fecha de corte del periodo ${period}.`}</small>
