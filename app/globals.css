@@ -41,6 +41,13 @@ button, summary, select { -webkit-tap-highlight-color: transparent; }
 
 .filter-rail.is-expanded { width: 430px; }
 .rail-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 10px 22px; }
+.rail-heading-actions { display: flex; align-items: center; gap: 11px; }
+.reader-mode-toggle { width: 31px; height: 31px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 9px; background: transparent; color: #727278; cursor: pointer; transition: color .18s ease, background .18s ease, transform .18s ease; }
+.reader-mode-toggle:hover, .reader-mode-toggle:focus-visible { outline: 0; background: #e8e8ec; color: #242428; }
+.reader-mode-toggle:active { transform: scale(.94); }
+.pane-icon { position: relative; width: 17px; height: 17px; display: block; border: 1.6px solid currentColor; border-radius: 4px; }
+.pane-icon::before { position: absolute; top: -1.6px; bottom: -1.6px; left: 5px; width: 1.6px; border-radius: 2px; background: currentColor; content: ""; }
+.reader-mode-restore { display: none; flex: 0 0 34px; }
 .eyebrow { display: block; color: #98989f; font-size: 10px; font-weight: 760; letter-spacing: 0.16em; }
 h1 { margin: 5px 0 0; font-size: 25px; letter-spacing: -0.045em; }
 .data-dot { width: 9px; height: 9px; border-radius: 50%; background: #34c759; box-shadow: 0 0 0 5px rgba(52, 199, 89, 0.11); }
@@ -1432,11 +1439,27 @@ html, body { background: #fff; }
   -webkit-text-fill-color: transparent;
 }
 .report-cover.artwork-almacenista,
-.report-cover.artwork-encuesta_de_satisfaccion { color: #fff; text-shadow: none; }
+.report-cover.artwork-encuesta_de_satisfaccion,
+.report-cover.artwork-staff_collection { color: #fff; text-shadow: 0 1px 12px rgba(0,0,0,.42); }
+.report-cover.artwork-staff_collection { background-position: 52% center; }
+.report-cover.artwork-staff_collection::after { inset: 0; width: auto; height: auto; display: block; border: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(0,0,0,.22), transparent 44%, rgba(0,0,0,.58)); }
 .report-cover.artwork-almacenista > i,
 .report-cover.artwork-encuesta_de_satisfaccion > i,
+.report-cover.artwork-staff_collection > i,
 .report-cover.artwork-cajero > i {
   background-image: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.22));
+}
+
+/* Reading mode: remove navigation and scale the document as one unit so its
+   spacing, typography, charts and controls retain the same proportions. */
+.workspace-shell.reader-mode .filter-rail { width: 0; padding-right: 0; padding-left: 0; overflow: hidden; border-right: 0; opacity: 0; pointer-events: none; }
+.workspace-shell.reader-mode .report-space { width: 100%; border-radius: 26px; }
+.workspace-shell.reader-mode .reader-mode-restore { display: grid; }
+.workspace-shell.reader-mode .sheet {
+  width: min(860px, calc((100% - 64px) * .666667));
+  margin-top: 32px;
+  margin-bottom: 120px;
+  zoom: 1.5;
 }
 .book-card-copy { width: 100%; display: block; padding: 22px 2px 0; }
 .book-card-copy > strong, .book-card-copy > small { display: block; }

@@ -72,6 +72,7 @@ const ReportCover = memo(function ReportCover({ category, compact = false }: { c
     cajero: "/report-covers/cajero-v2.png",
     encuesta_de_satisfaccion: "/report-covers/encuesta-satisfaccion-v2.png",
     gerente: "/report-covers/gerente-v1.png",
+    staff_collection: "/report-covers/staff-moon.png",
     tienda: "/report-covers/asesor-v1.png",
   }[category.key] ?? null;
   const artwork = compact && tiendaChapterKeys.includes(category.key) ? null : coverArtwork;
@@ -208,6 +209,7 @@ export default function Home() {
   const [showAllCourses, setShowAllCourses] = useState(false);
   const [tiendaAccent, setTiendaAccent] = useState(tiendaAccentOptions[0]);
   const [accentPickerOpen, setAccentPickerOpen] = useState(false);
+  const [readerMode, setReaderMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [usingDemo, setUsingDemo] = useState(true);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
@@ -452,6 +454,7 @@ export default function Home() {
     setSelectedCategories([]);
     setOpenBook(null);
     setExpandedBook(null);
+    setReaderMode(false);
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
@@ -520,6 +523,9 @@ export default function Home() {
     : usingDemo
       ? "No se encontraron datos publicados para los filtros seleccionados"
       : `Última sincronización: ${lastSyncAt?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) ?? "ahora"}`;
+  const reportPeriodLabel = activeEic
+    ? `Corte ${activeEic.cutoffDate || activeEic.period}`
+    : tiendaPeriodReady ? period : "Selecciona periodo";
 
   if (!selectedCategories.length && !openBook) {
     return <div className="site-page library-page">
@@ -569,11 +575,14 @@ export default function Home() {
         <p>{activeEic ? "Consulta presupuesto, inversión, cotizaciones, capacitaciones y pagos por dirección C-Level." : reportIsSurvey ? "Explora satisfacción, recomendación y desempeño por programa e instructor." : "Consulta el avance mensual, compara regiones y encuentra cursos pendientes."}</p>
       </section>
 
-    <main className="workspace-shell">
+    <main className={readerMode ? "workspace-shell reader-mode" : "workspace-shell"}>
       <aside className="filter-rail">
         <header className="rail-heading">
           <div><span className="eyebrow">CATÁLOGO</span><h1>Reportes</h1></div>
-          <span className={`data-dot ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle} />
+          <div className="rail-heading-actions">
+            <button type="button" className="reader-mode-toggle" onClick={() => setReaderMode(true)} aria-label="Ocultar navegación y ampliar reporte" title="Ampliar reporte"><span className="pane-icon" aria-hidden="true" /></button>
+            <span className={`data-dot ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle} />
+          </div>
         </header>
 
         <label className="rail-search"><i aria-hidden="true">⌕</i><input value={reportQuery} onChange={(event) => setReportQuery(event.target.value)} placeholder="Buscar reporte" /></label>
@@ -620,8 +629,9 @@ export default function Home() {
 
       <section className="report-space" key={selectedCategories.join("|")}>
         <header className="topbar">
-          <div className="report-name"><ReportCover category={selectedCategory} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {tiendaPeriodReady ? period : "Selecciona periodo"}</small></span></div>
+          <div className="report-name"><ReportCover category={selectedCategory} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {reportPeriodLabel}</small></span></div>
           <div className="topbar-actions">
+            <button type="button" className="reader-mode-toggle reader-mode-restore" onClick={() => setReaderMode(false)} aria-label="Mostrar navegación y restaurar tamaño" title="Mostrar navegación"><span className="pane-icon" aria-hidden="true" /></button>
             <span className={`status-pill ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>{syncLabel}</span>
             <button
               type="button"
@@ -707,7 +717,7 @@ export default function Home() {
               )}
             </div></div>}
 
-            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} /> : activeEic ? <EicStatusReport key={`${activeEic.category}/${activeEic.period}`} dashboard={activeEic} year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} /> : <><section className="report-lead">
+            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} /> : activeEic ? <EicStatusReport key={`${activeEic.category}/${activeEic.period}`} dashboard={activeEic} /> : <><section className="report-lead">
               <h3>{selectedLabel}</h3>
               <p>{peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde RunSQL."}</p>
               <small>{usingDemo ? "Aún no hay datos sincronizados para este periodo. Publica la información desde RunSQL." : `Fecha de corte del periodo ${period}.`}</small>

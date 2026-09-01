@@ -9,8 +9,6 @@ import {
 } from "../lib/dashboard-data";
 import PopupFilter from "./ToolbarPopupFilter";
 
-const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-
 function text(row: EicAdministrativeRow, key: string, fallback = "Sin especificar") {
   const value = row[key];
   return value === null || value === undefined || value === "" ? fallback : String(value);
@@ -60,16 +58,8 @@ function groupStatus(rows: EicAdministrativeRow[], labelKey: string, valueKey: s
 
 export default function EicStatusReport({
   dashboard,
-  year,
-  month,
-  onYearChange,
-  onMonthChange,
 }: {
   dashboard: CategoryDashboard;
-  year: string;
-  month: string;
-  onYearChange(value: string): void;
-  onMonthChange(value: string): void;
 }) {
   const [views, setViews] = useState<EicAdministrativeViews>({});
   const [loading, setLoading] = useState(true);
@@ -174,14 +164,11 @@ export default function EicStatusReport({
     })).sort((a, b) => b.budget - a.budget);
   }, [cLevel, views.c_level]);
 
-  const years = [...new Set([dashboard.period.slice(0, 4), ...Object.keys(dashboard.history).map((item) => item.slice(0, 4))])].sort();
   const scopeLabel = cLevel !== "all" ? cLevel : "Vista general";
 
   return <div className="eic-report">
     <div className="floating-toolbar-frame eic-toolbar-frame">
       <div className="sheet-toolbar eic-toolbar" aria-label="Filtros del estatus de planes de capacitación">
-        <PopupFilter label="Año" value={year} options={years.map((item) => ({ value: item, label: item }))} open={openFilter === "eic-year"} onOpenChange={(open) => setOpenFilter(open ? "eic-year" : null)} onChange={onYearChange} />
-        <PopupFilter label="Mes" className="month-filter" value={month} options={monthNames.map((label, index) => ({ value: String(index + 1), label }))} open={openFilter === "eic-month"} onOpenChange={(open) => setOpenFilter(open ? "eic-month" : null)} onChange={onMonthChange} />
         <PopupFilter label="C-Level" className="region-filter" value={cLevel} options={[{ value: "all", label: "Todas las direcciones C-Level" }, ...cLevels.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-c-level"} onOpenChange={(open) => setOpenFilter(open ? "eic-c-level" : null)} onChange={setCLevel} />
       </div>
     </div>
