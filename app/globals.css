@@ -299,13 +299,11 @@ html, body { background: #fff; }
 .sheet-title { display: block; }
 .sheet-title h2 { max-width: 650px; margin-top: 14px; font-size: clamp(39px, 4vw, 54px); font-weight: 680; line-height: 1.04; }
 .sheet-title.tienda-letterhead { display: block; }
-.tienda-letterhead-logo { position: relative; width: min(250px, 54%); height: 64px; margin: -46px 0 48px; overflow: hidden; background: transparent; }
-.tienda-letterhead-logo img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; object-position: left center; }
-.tienda-letterhead-logo .logo-ink { filter: brightness(0); }
-.tienda-letterhead-logo .logo-accent { clip-path: inset(0 83% 0 0); }
-.tienda-letterhead .sheet-title-copy { position: relative; min-width: 0; margin: 0; padding: 0; }
+.tienda-letterhead-logo { width: min(250px, 54%); height: 64px; margin: -46px 0 48px; overflow: hidden; background: transparent; }
+.tienda-letterhead-logo img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: left center; }
+.tienda-letterhead .sheet-title-copy { position: relative; min-width: 0; margin: 0; padding: 0; container-type: inline-size; }
 .tienda-letterhead .sheet-title-copy::before { position: absolute; top: -6px; bottom: -6px; left: -24px; width: 4px; background: #f8d31c; content: ""; }
-.tienda-letterhead .sheet-title-copy h2 { max-width: none; font-size: clamp(34px, 4vw, 48px); letter-spacing: -.055em; white-space: nowrap; }
+.tienda-letterhead .sheet-title-copy h2 { max-width: none; font-size: clamp(22px, 6.15cqi, 42px); letter-spacing: -.055em; white-space: nowrap; }
 .tienda-confidentiality { margin-top: 92px; padding: 24px 0 2px; border-top: 1px solid #d8d8dd; color: #77777d; font-size: 8px; font-weight: 520; line-height: 1.65; }
 .tienda-confidentiality strong { font-weight: 650; }
 .sheet-toolbar {
@@ -468,7 +466,7 @@ html, body { background: #fff; }
   .sheet { width: calc(100% - 20px); margin: 10px 10px 50px; padding: 48px 25px 60px; }
   .tienda-letterhead-logo { width: min(220px, 72%); height: 56px; margin: -24px 0 38px; }
   .tienda-letterhead .sheet-title-copy::before { left: -14px; width: 3px; }
-  .tienda-letterhead .sheet-title-copy h2 { font-size: clamp(24px, 6vw, 36px); }
+  .tienda-letterhead .sheet-title-copy h2 { font-size: clamp(20px, 6.15cqi, 32px); }
   .metric-grid { grid-template-columns: 1fr; }
   .metric-grid article { border-right: 0; border-bottom: 1px solid #e0e0e4; }
   .metric-grid article:last-child { border-bottom: 0; }
