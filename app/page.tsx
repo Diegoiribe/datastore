@@ -582,7 +582,16 @@ export default function Home() {
           <article className={loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"} ref={reportSheetRef}>
             <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : "sheet-title"} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent } as CSSProperties : undefined}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
-                <div className="tienda-letterhead-logo"><img src="/academia-ventas-logo-black.png" alt="Universidad Corporativa Coppel · Programas Académicos" /></div>
+                <div className="tienda-letterhead-logo" role="img" aria-label="Coppel Universidad Corporativa · Academia de Ventas">
+                  <div className="coppel-brand-block">
+                    <span className="coppel-dots" aria-hidden="true"><i /><i /><i /></span>
+                    <strong>Coppel</strong>
+                    <span>Universidad</span>
+                    <span>Corporativa</span>
+                  </div>
+                  <i className="brand-divider" aria-hidden="true" />
+                  <div className="sales-academy-name"><span>Academia</span><span>de Ventas</span></div>
+                </div>
                 <div className={accentPickerOpen ? "tienda-accent-picker is-open" : "tienda-accent-picker"}>
                   <div className="accent-options" aria-hidden={!accentPickerOpen}>
                     <div>{tiendaAccentOptions.map((option) => <button
