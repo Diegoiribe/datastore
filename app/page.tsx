@@ -27,12 +27,12 @@ const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const staffCollectionCategory: CategoryOption = { key: "staff_collection", label: "Staff" };
 const collectionTabColors = ["#f4cb63", "#f2a895", "#b9dcae", "#9ec9eb", "#c8b7df", "#efb8d5", "#a8d9d2"];
 const tiendaAccentOptions = [
-  { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 33%, #1C42E8 33% 66%, #081754 66% 100%)" },
-  { key: "institutional_light", label: "Institucional clara", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 50%, #1C42E8 50% 76%, #081754 76% 100%)" },
+  { key: "institutional", label: "Amarillo institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#C9A900", swatch: "linear-gradient(90deg, #F0D224 0 56%, #1C42E8 56% 78%, #081754 78% 100%)" },
+  { key: "yellow_sky", label: "Amarillo cielo", accent: "#F4CF24", secondary: "#1CA8F7", deep: "#082750", action: "#C9A400", swatch: "linear-gradient(90deg, #F4CF24 0 58%, #1CA8F7 58% 82%, #082750 82% 100%)" },
   { key: "monochrome", label: "Monocromática", accent: "#1D1D1F", secondary: "#8E8E93", deep: "#000000", action: "#3A3A3C", swatch: "linear-gradient(90deg, #111113 0 38%, #8E8E93 38% 68%, #F4F4F6 68% 100%)" },
-  { key: "institutional_sky", label: "Institucional cielo", accent: "#1CA8F7", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 28%, #1CA8F7 28% 62%, #1C42E8 62% 100%)" },
-  { key: "solar", label: "Solar", accent: "#F0D224", secondary: "#081754", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #F0D224 0 46%, #081754 46% 76%, #1CA8F7 76% 100%)" },
-  { key: "solar_blue", label: "Solar azul", accent: "#1C42E8", secondary: "#F0D224", deep: "#081754", action: "#081754", swatch: "linear-gradient(90deg, #F0D224 0 38%, #081754 38% 66%, #1C42E8 66% 100%)" },
+  { key: "yellow_coral", label: "Amarillo coral", accent: "#F2CC22", secondary: "#EF8B72", deep: "#4B2430", action: "#C7A200", swatch: "linear-gradient(90deg, #F2CC22 0 58%, #EF8B72 58% 82%, #4B2430 82% 100%)" },
+  { key: "yellow_cobalt", label: "Amarillo cobalto", accent: "#F0D224", secondary: "#2446E8", deep: "#081754", action: "#C5A400", swatch: "linear-gradient(90deg, #F0D224 0 62%, #2446E8 62% 83%, #081754 83% 100%)" },
+  { key: "yellow_sage", label: "Amarillo salvia", accent: "#EFCF35", secondary: "#77A88C", deep: "#173B31", action: "#B99700", swatch: "linear-gradient(90deg, #EFCF35 0 60%, #77A88C 60% 83%, #173B31 83% 100%)" },
 ];
 
 function textKey(value: string) {

@@ -896,13 +896,13 @@ html, body { background: #fff; }
 .sheet.survey-themed .survey-bars i b { background: var(--survey-accent); }
 .sheet.survey-themed .rubric-list i b,
 .sheet.survey-themed .program-table i b,
-.sheet.survey-themed .metric-track .isa-fill { background: var(--survey-action); }
+.sheet.survey-themed .metric-track .isa-fill { background: var(--survey-accent); }
 .sheet.survey-themed .metric-track .volume-fill,
 .sheet.survey-themed .chart-volume-bar { background: var(--survey-secondary); fill: var(--survey-secondary); }
-.sheet.survey-themed .chart-isa-line { stroke: var(--survey-action); }
-.sheet.survey-themed .chart-point { stroke: var(--survey-action); }
+.sheet.survey-themed .chart-isa-line { stroke: var(--survey-accent); }
+.sheet.survey-themed .chart-point { stroke: var(--survey-accent); }
 .sheet.survey-themed .chart-value { fill: var(--survey-deep); }
-.sheet.survey-themed .line-key { background: var(--survey-action); }
+.sheet.survey-themed .line-key { background: var(--survey-accent); }
 .sheet.survey-themed .volume-key { background: var(--survey-secondary); }
 .sheet.survey-themed .stars-fill { color: var(--survey-accent) !important; }
 .sheet.survey-themed .panel-switch button.active,
