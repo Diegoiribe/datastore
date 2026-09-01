@@ -374,8 +374,9 @@ html, body { background: #fff; }
   backdrop-filter: blur(18px);
 }
 .toolbar-popup-scroll { max-height: 228px; padding: 6px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-padding-block: 6px; }
-.toolbar-popup-filter.month-filter .toolbar-popup-options { max-height: min(446px, calc(100vh - 110px)); }
-.toolbar-popup-filter.month-filter .toolbar-popup-scroll { max-height: min(444px, calc(100vh - 112px)); }
+.toolbar-popup-filter.month-filter .toolbar-popup-options { max-height: none; }
+.toolbar-popup-filter.month-filter .toolbar-popup-scroll { max-height: none; }
+.toolbar-popup-filter.month-filter .toolbar-popup-options button { height: 36px; min-height: 36px; padding-block: 0; }
 .toolbar-popup-scroll::-webkit-scrollbar { display: none; }
 .toolbar-popup-options button { width: 100%; min-height: 36px; display: grid; grid-template-columns: minmax(0,1fr) 16px; align-items: center; gap: 10px; padding: 7px 9px; border: 0; border-radius: 9px; background: transparent; color: #3f3f44; text-align: left; cursor: pointer; }
 .toolbar-popup-options button:hover,
