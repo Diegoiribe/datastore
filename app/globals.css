@@ -299,7 +299,7 @@ html, body { background: #fff; }
 .sheet-title { display: block; }
 .sheet-title h2 { max-width: 650px; margin-top: 14px; font-size: clamp(39px, 4vw, 54px); font-weight: 680; line-height: 1.04; }
 .sheet-title.tienda-letterhead { display: block; }
-.tienda-letterhead-logo { width: min(250px, 54%); height: 64px; margin: -46px 0 48px; overflow: hidden; background: transparent; }
+.tienda-letterhead-logo { width: min(250px, 54%); height: 64px; margin: -46px 0 48px -24px; overflow: hidden; background: transparent; }
 .tienda-letterhead-logo img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: left center; }
 .tienda-letterhead .sheet-title-copy { position: relative; min-width: 0; margin: 0; padding: 0; container-type: inline-size; }
 .tienda-letterhead .sheet-title-copy::before { position: absolute; top: -6px; bottom: -6px; left: -24px; width: 4px; background: #f8d31c; content: ""; }
@@ -464,7 +464,7 @@ html, body { background: #fff; }
   .filter-rail { width: 68px; min-height: 100vh; border-radius: 0; }
   .filter-rail.is-expanded { position: fixed; inset: 0 auto 0 0; z-index: 20; width: min(92vw, 430px); overflow-y: auto; }
   .sheet { width: calc(100% - 20px); margin: 10px 10px 50px; padding: 48px 25px 60px; }
-  .tienda-letterhead-logo { width: min(220px, 72%); height: 56px; margin: -24px 0 38px; }
+  .tienda-letterhead-logo { width: min(220px, 72%); height: 56px; margin: -24px 0 38px -14px; }
   .tienda-letterhead .sheet-title-copy::before { left: -14px; width: 3px; }
   .tienda-letterhead .sheet-title-copy h2 { font-size: clamp(20px, 6.15cqi, 32px); }
   .metric-grid { grid-template-columns: 1fr; }
