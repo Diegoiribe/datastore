@@ -89,7 +89,7 @@ export type CategoryDashboard = {
   courses: string[];
   pendingSections: PendingSection[];
   history: Record<string, PeriodSummary>;
-  dataKind: "training" | "satisfaction";
+  dataKind: "training" | "satisfaction" | "eic_administrative";
   programs: string[];
   instructors: string[];
   responseCount: number;

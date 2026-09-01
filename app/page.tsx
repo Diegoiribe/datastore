@@ -344,7 +344,7 @@ export default function Home() {
   const tiendaPeriodReady = openBook !== "tienda" || (yearFilterChosen && monthFilterChosen);
   const sourceMetrics = useMemo<MetricRow[]>(() => !selectedCategories.length
     ? []
-    : dashboards.filter((item) => item.dataKind !== "satisfaction").flatMap((item) => item.metrics as MetricRow[]),
+    : dashboards.filter((item) => item.dataKind === "training").flatMap((item) => item.metrics as MetricRow[]),
   [dashboards, selectedCategories.length]);
   const availablePositions = useMemo(() => [...new Set(sourceMetrics.map((row) => row.puesto))].sort(), [sourceMetrics]);
   const availableRegions = useMemo(() => [...new Set(sourceMetrics.map((row) => row.region))].sort(), [sourceMetrics]);
