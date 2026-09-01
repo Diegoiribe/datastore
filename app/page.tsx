@@ -13,10 +13,18 @@ import {
 import SatisfactionReport from "./SatisfactionReport";
 import PopupFilter, { useDelayedPanelClose } from "./ToolbarPopupFilter";
 
-type CategoryOption = { key: string; label: string; history?: Record<string, PeriodSummary> };
+type CategoryOption = {
+  key: string;
+  label: string;
+  collectionKey?: string | null;
+  collectionLabel?: string | null;
+  history?: Record<string, PeriodSummary>;
+};
 
 const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerente_zona"];
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
+const staffCollectionCategory: CategoryOption = { key: "staff_collection", label: "Staff" };
+const collectionTabColors = ["#f4cb63", "#f2a895", "#b9dcae", "#9ec9eb", "#c8b7df", "#efb8d5", "#a8d9d2"];
 const tiendaAccentOptions = [
   { key: "institutional", label: "Institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 33%, #1C42E8 33% 66%, #081754 66% 100%)" },
   { key: "institutional_light", label: "Institucional clara", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#1C42E8", swatch: "linear-gradient(90deg, #F0D224 0 50%, #1C42E8 50% 76%, #081754 76% 100%)" },
@@ -32,6 +40,8 @@ function textKey(value: string) {
 
 function reportFamily(category: CategoryOption) {
   if (category.key === "tienda") return { label: "Colección", description: "Cinco capítulos del equipo de Tienda" };
+  if (category.key === "staff_collection") return { label: "Colección", description: "Reportes de capacitación del equipo Staff" };
+  if (category.collectionKey === "staff") return { label: "Talento", description: "Seguimiento de capacitación corporativa" };
   if (category.key === "encuesta_de_satisfaccion") return { label: "Experiencia", description: "Satisfacción, recomendación y voz del participante" };
   if (category.key === "staff") return { label: "Talento", description: "Seguimiento de capacitación corporativa" };
   return { label: "Avance", description: "Cumplimiento, asignaciones y cursos pendientes" };
@@ -73,11 +83,11 @@ const ReportCover = memo(function ReportCover({ category, compact = false }: { c
   </span>;
 });
 
-function TiendaBookCover({ compact = false }: { compact?: boolean }) {
+function CollectionBookCover({ category, chapters, compact = false }: { category: CategoryOption; chapters: CategoryOption[]; compact?: boolean }) {
   return <span className={compact ? "tienda-book-cover compact" : "tienda-book-cover"}>
-    <ReportCover category={tiendaCategory} compact={compact} />
+    <ReportCover category={category} compact={compact} />
     <span className="book-index-tabs" aria-hidden="true">
-      {tiendaChapterKeys.map((key, index) => <i key={key}>{String(index + 1).padStart(2, "0")}</i>)}
+      {chapters.map((chapter, index) => <i key={chapter.key} style={{ "--tab-color": collectionTabColors[index % collectionTabColors.length] } as CSSProperties}>{String(index + 1).padStart(2, "0")}</i>)}
     </span>
   </span>;
 }
@@ -173,7 +183,7 @@ export default function Home() {
   const [categories, setCategories] = useState(fallbackCategories);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [openBook, setOpenBook] = useState<string | null>(null);
-  const [bookExpanded, setBookExpanded] = useState(false);
+  const [expandedBook, setExpandedBook] = useState<string | null>(null);
   const [reportQuery, setReportQuery] = useState("");
   const [dashboards, setDashboards] = useState<CategoryDashboard[]>([]);
   const [year, setYear] = useState("2026");
@@ -210,7 +220,7 @@ export default function Home() {
     listCategories()
       .then((items) => {
         if (items.length) {
-          setCategories(items.map(({ key, label, history }) => ({ key, label, history })));
+          setCategories(items.map(({ key, label, collectionKey, collectionLabel, history }) => ({ key, label, collectionKey, collectionLabel, history })));
           setSelectedCategories((current) => current.filter((key) => items.some((item) => item.key === key)));
           const latestPeriod = items.flatMap((item) => Object.keys(item.history ?? {})).sort().at(-1);
           if (latestPeriod) {
@@ -291,22 +301,40 @@ export default function Home() {
     () => tiendaChapterKeys.map((key) => categories.find((category) => category.key === key)).filter((category): category is CategoryOption => Boolean(category)),
     [categories],
   );
+  const staffChapters = useMemo(
+    () => categories.filter((category) => category.key === "staff" || category.collectionKey === "staff"),
+    [categories],
+  );
+  const chapterKeys = useMemo(
+    () => new Set([...tiendaChapters, ...staffChapters].map((category) => category.key)),
+    [staffChapters, tiendaChapters],
+  );
   const libraryReports = useMemo(() => {
-    const standalone = categories.filter((category) => !tiendaChapterKeys.includes(category.key));
-    return tiendaChapters.length ? [tiendaCategory, ...standalone] : standalone;
-  }, [categories, tiendaChapters.length]);
+    const standalone = categories.filter((category) => !chapterKeys.has(category.key));
+    return [
+      ...(tiendaChapters.length ? [tiendaCategory] : []),
+      staffCollectionCategory,
+      ...standalone,
+    ];
+  }, [categories, chapterKeys, staffChapters.length, tiendaChapters.length]);
+  const collectionChapters = useCallback((key: string) => {
+    if (key === "tienda") return tiendaChapters;
+    if (key === "staff_collection") return staffChapters;
+    return [];
+  }, [staffChapters, tiendaChapters]);
   const filteredReports = useMemo(() => {
     const query = textKey(reportQuery);
     return query ? libraryReports.filter((category) => {
       const family = reportFamily(category);
-      const chapterLabels = category.key === "tienda" ? tiendaChapters.map((chapter) => chapter.label).join(" ") : "";
+      const chapterLabels = collectionChapters(category.key).map((chapter) => chapter.label).join(" ");
       return textKey(`${category.label} ${family.label} ${family.description} ${chapterLabels}`).includes(query);
     }) : libraryReports;
-  }, [libraryReports, reportQuery, tiendaChapters]);
-  const visibleChapters = useMemo(() => {
+  }, [collectionChapters, libraryReports, reportQuery]);
+  const visibleCollectionChapters = useCallback((key: string) => {
+    const chapters = collectionChapters(key);
     const query = textKey(reportQuery);
-    return query ? tiendaChapters.filter((category) => textKey(category.label).includes(query)) : tiendaChapters;
-  }, [reportQuery, tiendaChapters]);
+    return query ? chapters.filter((category) => textKey(category.label).includes(query)) : chapters;
+  }, [collectionChapters, reportQuery]);
   const selectedReportOptions = useMemo(
     () => categories.filter((item) => selectedCategories.includes(item.key)),
     [categories, selectedCategories],
@@ -395,17 +423,19 @@ export default function Home() {
     setSelectedCategories(nextSelection);
     if (!switchingReport) window.scrollTo({ top: 0, behavior: "auto" });
   };
-  const openTiendaBook = () => {
-    const firstChapter = tiendaChapters[0];
+  const openCollectionBook = (collectionKey: "tienda" | "staff") => {
+    const chapters = collectionKey === "tienda" ? tiendaChapters : staffChapters;
+    const firstChapter = chapters[0];
     if (!firstChapter) return;
     resetCategoryFilters();
     setReportQuery("");
-    setOpenBook("tienda");
-    setBookExpanded(false);
+    setOpenBook(collectionKey);
+    setExpandedBook(null);
     selectCategory(firstChapter.key);
   };
   const selectLibraryReport = (key: string) => {
-    if (key === "tienda") openTiendaBook();
+    if (key === "tienda") openCollectionBook("tienda");
+    else if (key === "staff_collection") openCollectionBook("staff");
     else {
       setOpenBook(null);
       selectCategory(key);
@@ -419,7 +449,7 @@ export default function Home() {
     setLoading(false);
     setSelectedCategories([]);
     setOpenBook(null);
-    setBookExpanded(false);
+    setExpandedBook(null);
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
@@ -506,8 +536,10 @@ export default function Home() {
         <header><div><span>Todos los reportes</span><small>Publicados por la Universidad Corporativa</small></div><b>{filteredReports.length}</b></header>
         {filteredReports.length ? <div className="book-library-grid">{filteredReports.map((category, index) => {
           const family = reportFamily(category);
-          return <button className={category.key === "tienda" ? "book-card collection" : "book-card"} key={category.key} onClick={() => selectLibraryReport(category.key)} style={{ animationDelay: `${index * 45}ms` }}>
-            {category.key === "tienda" ? <TiendaBookCover /> : <ReportCover category={category} />}
+          const chapters = collectionChapters(category.key);
+          const isCollection = category.key === "tienda" || category.key === "staff_collection";
+          return <button className={isCollection ? "book-card collection" : "book-card"} key={category.key} onClick={() => selectLibraryReport(category.key)} style={{ animationDelay: `${index * 45}ms` }}>
+            {isCollection ? <CollectionBookCover category={category} chapters={chapters} /> : <ReportCover category={category} />}
             <span className="book-card-copy"><span className="report-family-tag">{family.label}</span><strong>{category.label}</strong><small>{family.description}</small></span>
           </button>;
         })}</div> : <section className="library-empty"><strong>No encontramos ese reporte.</strong><span>Prueba con otro nombre o con una familia como “Avance” o “Experiencia”.</span></section>}
@@ -545,35 +577,41 @@ export default function Home() {
         <label className="rail-search"><i aria-hidden="true">⌕</i><input value={reportQuery} onChange={(event) => setReportQuery(event.target.value)} placeholder="Buscar reporte" /></label>
         <div className="rail-section-title"><span>Reportes</span><small>{filteredReports.length}</small></div>
         <nav className="category-list" aria-label="Categorías del reporte">
-          {filteredReports.map((category) => category.key === "tienda" ? <div className="category-collection" key={category.key}>
-              <button className="category collection-category" onClick={() => setBookExpanded((current) => !current)} aria-expanded={bookExpanded}>
-                <TiendaBookCover compact />
-                <span className="category-copy"><span>Tienda</span><small>{tiendaChapters.length} capítulos</small></span>
+          {filteredReports.map((category) => {
+            const chapters = visibleCollectionChapters(category.key);
+            const collectionKey = category.key === "tienda" ? "tienda" : category.key === "staff_collection" ? "staff" : null;
+            if (collectionKey) return <div className="category-collection" key={category.key}>
+              <button className="category collection-category" onClick={() => setExpandedBook((current) => current === category.key ? null : category.key)} aria-expanded={expandedBook === category.key}>
+                <CollectionBookCover category={category} chapters={collectionChapters(category.key)} compact />
+                <span className="category-copy"><span>{category.label}</span><small>{collectionChapters(category.key).length} capítulos</small></span>
               </button>
-              <div className={bookExpanded ? "chapter-subnotes open" : "chapter-subnotes"}>
-                {visibleChapters.map((chapter, index) => <button
+              <div className={expandedBook === category.key ? "chapter-subnotes open" : "chapter-subnotes"}>
+                {chapters.map((chapter, index) => <button
                   className={selectedCategories.includes(chapter.key) ? "category chapter-note active" : "category chapter-note"}
                   key={chapter.key}
-                  onClick={() => { setOpenBook("tienda"); selectCategory(chapter.key); }}
-                  onContextMenu={(event) => { event.preventDefault(); setOpenBook("tienda"); selectCategory(chapter.key, true); }}
+                  onClick={() => { setOpenBook(collectionKey); selectCategory(chapter.key); }}
+                  onContextMenu={(event) => { event.preventDefault(); setOpenBook(collectionKey); selectCategory(chapter.key, true); }}
                   aria-pressed={selectedCategories.includes(chapter.key)}
                   title="Clic izquierdo para cambiar · clic derecho para combinar"
+                  style={{ "--note-color": collectionTabColors[index % collectionTabColors.length] } as CSSProperties}
                 >
                   <span className="chapter-note-index">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="category-copy"><span>{chapter.label}</span><small>Capítulo de Tienda</small></span>
+                  <span className="category-copy"><span>{chapter.label}</span><small>Capítulo de {category.label}</small></span>
                 </button>)}
               </div>
-            </div> : <button
-                className={selectedCategories.includes(category.key) ? "category active" : "category"}
-                key={category.key}
-                onClick={() => { setOpenBook(null); setBookExpanded(false); selectCategory(category.key); }}
-                onContextMenu={(event) => { event.preventDefault(); selectCategory(category.key, true); }}
-                aria-pressed={selectedCategories.includes(category.key)}
-                title="Clic izquierdo para cambiar · clic derecho para combinar"
-              >
-                <ReportCover category={category} compact />
-                <span className="category-copy"><span>{category.label}</span><small>{reportFamily(category).label}</small></span>
-              </button>)}
+            </div>;
+            return <button
+              className={selectedCategories.includes(category.key) ? "category active" : "category"}
+              key={category.key}
+              onClick={() => { setOpenBook(null); setExpandedBook(null); selectCategory(category.key); }}
+              onContextMenu={(event) => { event.preventDefault(); selectCategory(category.key, true); }}
+              aria-pressed={selectedCategories.includes(category.key)}
+              title="Clic izquierdo para cambiar · clic derecho para combinar"
+            >
+              <ReportCover category={category} compact />
+              <span className="category-copy"><span>{category.label}</span><small>{reportFamily(category).label}</small></span>
+            </button>;
+          })}
         </nav>
 
       </aside>

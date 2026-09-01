@@ -1242,7 +1242,7 @@ html, body { background: #fff; }
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 8px;
+  gap: 4px;
   pointer-events: none;
 }
 .book-index-tabs i {
@@ -1250,7 +1250,9 @@ html, body { background: #fff; }
   position: relative;
   right: 0;
   width: 31px;
-  height: 30px;
+  min-height: 12px;
+  max-height: 30px;
+  flex: 1 1 0;
   display: grid;
   place-items: center;
   border-radius: 0 8px 8px 0;
@@ -1270,7 +1272,10 @@ html, body { background: #fff; }
 .tienda-book-cover.compact .book-index-tabs { inset: 0 -7px 0 auto; width: 9px; gap: 1px; }
 .tienda-book-cover.compact .book-index-tabs i {
   width: 9px;
-  height: 6px;
+  height: auto;
+  min-height: 2px;
+  max-height: 6px;
+  flex: 1 1 0;
   flex: none;
   border-radius: 0 2px 2px 0;
   box-shadow: 1px 1px 2px rgba(0,0,0,.12);
@@ -1361,7 +1366,8 @@ html, body { background: #fff; }
 .category-collection { display: grid; }
 .filter-rail .collection-category { grid-template-columns: 30px minmax(0, 1fr); overflow: visible; }
 .chapter-subnotes { max-height: 0; display: grid; gap: 4px; overflow: hidden; opacity: 0; transition: max-height .32s cubic-bezier(.2,.75,.25,1), opacity .2s ease, padding .2s ease; }
-.chapter-subnotes.open { max-height: 280px; padding: 5px 0 8px; opacity: 1; }
+.chapter-subnotes.open { max-height: min(52vh, 520px); padding: 5px 0 8px; overflow-y: auto; opacity: 1; scrollbar-width: none; }
+.chapter-subnotes.open::-webkit-scrollbar { display: none; }
 .chapter-subnotes .chapter-note {
   position: relative;
   width: calc(100% - 14px);

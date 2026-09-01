@@ -122,6 +122,8 @@ export async function listCategories() {
     Array<{
       key: string;
       label: string;
+      collectionKey: string | null;
+      collectionLabel: string | null;
       history: Record<string, PeriodSummary>;
     }>
   >("/api/dashboard/categories");
