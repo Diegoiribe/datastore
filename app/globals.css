@@ -1488,7 +1488,7 @@ html, body { background: #fff; }
 .report-cover.artwork-tienda > strong,
 .report-cover.artwork-staff_collection > strong { max-width: 100%; font-size: clamp(27px, 3vw, 38px); line-height: .92; }
 .report-cover > i { position: absolute; right: 17px; bottom: 37px; z-index: 1; font-size: 40px; font-style: normal; font-weight: 760; letter-spacing: -.09em; opacity: .16; }
-.report-cover > i::before { position: absolute; width: 68px; height: 68px; left: 50%; top: 50%; border: 2px solid var(--cover-arc); border-radius: 50%; transform: translate(-50%, -50%); content: ""; }
+.report-cover > i::before { position: absolute; width: 190px; height: 190px; right: -97px; bottom: -102px; border: 1px solid var(--cover-arc); border-radius: 50%; content: ""; }
 .report-cover > em { position: relative; z-index: 1; margin-top: auto; font-size: 6px; font-style: normal; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .66; }
 .report-cover.tone-ink { background: linear-gradient(145deg, #101114, #34353b); }
 .report-cover.tone-cobalt { background: linear-gradient(145deg, #1557d5, #72a1ff); }
