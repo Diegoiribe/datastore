@@ -23,6 +23,10 @@ function sum(rows: EicAdministrativeRow[], key: string) {
   return rows.reduce((total, row) => total + number(row, key), 0);
 }
 
+function optionalSum(rows: EicAdministrativeRow[], key: string) {
+  return rows.some((row) => row[key] !== null && row[key] !== undefined && row[key] !== "") ? sum(rows, key) : null;
+}
+
 function money(value: number) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -37,6 +41,22 @@ function percentage(value: number) {
 
 function compactNumber(value: number) {
   return new Intl.NumberFormat("es-MX", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+function displayValue(value: number | null) {
+  return value === null ? "—" : value.toLocaleString("es-MX");
+}
+
+function normalizeLabel(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es");
+}
+
+function modalityLabel(value: string) {
+  const normalized = normalizeLabel(value);
+  if (/presencial/.test(normalized)) return "Presencial";
+  if (/hibrid|mixt/.test(normalized)) return "Híbrida";
+  if (/online|linea|virtual|remot/.test(normalized)) return "Online";
+  return value === "Sin especificar" ? "Sin modalidad" : value;
 }
 
 function statusTone(label: string) {
@@ -109,6 +129,7 @@ export default function EicStatusReport({
   const quotationRows = useMemo(() => (views.quotation_status ?? []).filter(inScope), [views.quotation_status, inScope]);
   const trainingRows = useMemo(() => (views.training_status ?? []).filter(inScope), [views.training_status, inScope]);
   const paymentRows = useMemo(() => (views.payment_status ?? []).filter(inScope), [views.payment_status, inScope]);
+  const trainingGroups = useMemo(() => (views.training_groups ?? []).filter(inScope), [views.training_groups, inScope]);
   const quotationStatus = useMemo(() => groupStatus(quotationRows, "estatus_cotizacion", "necesidades"), [quotationRows]);
   const trainingStatus = useMemo(() => groupStatus(trainingRows, "estatus_grupo", "grupos"), [trainingRows]);
   const paymentStatus = useMemo(() => groupStatus(paymentRows, "estatus_pago", "movimientos"), [paymentRows]);
@@ -152,6 +173,58 @@ export default function EicStatusReport({
       executedPayment: sum(rows, "pago_ejecutado_mxn"),
     };
   }, [cLevel, filteredDirections, views.general]);
+
+  const authorizedPlan = useMemo(() => ({
+    dnc: sum(filteredDirections, "necesidades_plan"),
+    extraPlan: sum(filteredDirections, "necesidades_extra_plan"),
+    courses: optionalSum(filteredDirections, "cursos_plan"),
+    events: optionalSum(filteredDirections, "eventos_plan"),
+    executivePrograms: optionalSum(filteredDirections, "programas_ejecutivos_plan"),
+    certifications: optionalSum(filteredDirections, "certificaciones_plan"),
+    memberships: optionalSum(filteredDirections, "membresias_plan"),
+    subscriptions: optionalSum(filteredDirections, "suscripciones_plan"),
+    projectedPeople: operational.projectedPeople,
+  }), [filteredDirections, operational.projectedPeople]);
+
+  const clusterDistribution = useMemo(() => {
+    const buckets = [
+      { label: "Hasta $10,000", min: 0, max: 10000, people: 0 },
+      { label: "$10,001 – $25,000", min: 10000, max: 25000, people: 0 },
+      { label: "$25,001 – $50,000", min: 25000, max: 50000, people: 0 },
+      { label: "$50,001 – $75,000", min: 50000, max: 75000, people: 0 },
+      { label: "Más de $75,000", min: 75000, max: Number.POSITIVE_INFINITY, people: 0 },
+    ];
+    trainingGroups.forEach((row) => {
+      const price = number(row, "precio_persona_mxn");
+      if (price <= 0) return;
+      const people = number(row, "pax_reales");
+      const bucket = buckets.find((item) => price > item.min && price <= item.max);
+      if (bucket) bucket.people += people;
+    });
+    const total = buckets.reduce((value, item) => value + item.people, 0);
+    return buckets.map((item) => ({ ...item, share: total ? item.people / total : 0 }));
+  }, [trainingGroups]);
+
+  const modalities = useMemo(() => {
+    const groups = new Map<string, Set<string>>();
+    trainingGroups.forEach((row, index) => {
+      const label = modalityLabel(text(row, "modalidad"));
+      const id = text(row, "identificador", text(row, "nombre_capacitacion", String(index)));
+      if (!groups.has(label)) groups.set(label, new Set());
+      groups.get(label)!.add(id);
+    });
+    return [...groups].map(([label, ids]) => ({ label, value: ids.size })).sort((a, b) => b.value - a.value);
+  }, [trainingGroups]);
+
+  const budgetCategories = useMemo(() => {
+    const groups = new Map<string, number>();
+    initiatives.forEach((row) => {
+      const label = text(row, "tipo", "Sin categoría");
+      groups.set(label, (groups.get(label) ?? 0) + number(row, "inversion_actual_mxn"));
+    });
+    const total = [...groups.values()].reduce((value, item) => value + item, 0);
+    return [...groups].map(([label, value]) => ({ label, value, share: total ? value / total : 0 })).sort((a, b) => b.value - a.value);
+  }, [initiatives]);
 
   const cLevelComparison = useMemo(() => {
     const rows = cLevel === "all" ? (views.c_level ?? []) : (views.c_level ?? []).filter((row) => text(row, "direccion_c_level") === cLevel);
@@ -213,11 +286,48 @@ export default function EicStatusReport({
         </div>
       </section>
 
-      <section className="eic-operation-summary">
-        <article><span>Necesidades activas</span><strong>{operational.needs.toLocaleString("es-MX")}</strong><small>Con seguimiento vigente</small></article>
-        <article><span>Capacitaciones</span><strong>{operational.trainings.toLocaleString("es-MX")}</strong><small>{operational.groups.toLocaleString("es-MX")} grupos registrados</small></article>
-        <article><span>Impartidas</span><strong>{operational.delivered.toLocaleString("es-MX")}</strong><small>{operational.inProgress.toLocaleString("es-MX")} actualmente en curso</small></article>
-        <article><span>Participantes</span><strong>{operational.actualPeople.toLocaleString("es-MX")}</strong><small>de {operational.projectedPeople.toLocaleString("es-MX")} proyectados</small></article>
+      <section className="eic-authorized-plan">
+        <header><h4>Solicitados en Plan Autorizado</h4><p>Desglose de necesidades y modalidades de capacitación</p></header>
+        <div className="eic-authorized-grid">
+          <AuthorizedMetric label="DNCs" value={authorizedPlan.dnc} />
+          <AuthorizedMetric label="Extra Plan" value={authorizedPlan.extraPlan} />
+          <AuthorizedMetric label="Cursos" value={authorizedPlan.courses} />
+          <AuthorizedMetric label="Eventos" value={authorizedPlan.events} />
+          <AuthorizedMetric label="Programas ejecutivos" value={authorizedPlan.executivePrograms} />
+          <AuthorizedMetric label="Certificaciones" value={authorizedPlan.certifications} />
+          <AuthorizedMetric label="Membresías" value={authorizedPlan.memberships} />
+          <AuthorizedMetric label="Suscripciones" value={authorizedPlan.subscriptions} />
+          <AuthorizedMetric label="Pax proyectados" value={authorizedPlan.projectedPeople} />
+        </div>
+      </section>
+
+      <section className="eic-section eic-distribution-section">
+        <header className="eic-section-heading"><div><span>Distribución de capacitación</span><small>Participantes por inversión individual y cursos por modalidad</small></div></header>
+        <div className="eic-distribution-grid">
+          <article className="eic-clusters">
+            <header><strong>Distribución por clusters</strong><small>Participantes reales por precio negociado por persona</small></header>
+            <div>{clusterDistribution.map((item) => <div className="eic-cluster-row" key={item.label}>
+              <span>{item.label}</span><i><b style={{ width: `${item.share * 100}%` }} /></i><strong>{percentage(item.share)}</strong><small>{item.people.toLocaleString("es-MX")} participantes</small>
+            </div>)}</div>
+          </article>
+          <article className="eic-modalities">
+            <header><strong>Cantidad de cursos por modalidad</strong><small>Cursos únicos dentro de la selección actual</small></header>
+            <div>{modalities.length ? modalities.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value.toLocaleString("es-MX")}</strong></span>) : <p className="eic-empty">Sin modalidades registradas.</p>}</div>
+          </article>
+        </div>
+      </section>
+
+      <section className="eic-section">
+        <header className="eic-section-heading"><div><span>Presupuesto por categoría</span><small>Participación de la inversión actual por tipo de capacitación</small></div></header>
+        <div className="eic-category-table">
+          <div className="eic-category-head"><span>Categoría</span><span>Porcentaje del total</span><span>Inversión actual</span></div>
+          {budgetCategories.length ? budgetCategories.map((item) => <div className="eic-category-row" key={item.label}><strong>{item.label}</strong><span><em>{percentage(item.share)}</em><i><b style={{ width: `${item.share * 100}%` }} /></i></span><strong>{compactNumber(item.value)}</strong></div>) : <p className="eic-empty">Sin categorías registradas.</p>}
+        </div>
+      </section>
+
+      <section className="eic-section">
+        <header className="eic-section-heading"><div><span>Ranking de colaboradores con mayor inversión en cursos</span><small>Inversión acumulada por participante dentro de la selección</small></div></header>
+        <div className="eic-ranking-placeholder"><span>Datos de participantes pendientes</span><p>La hoja ya está preparada. El ranking se activará al publicar desde el SQL el número de colaborador, nombre, puesto y la inversión individual.</p></div>
       </section>
 
       <section className="eic-section">
@@ -270,5 +380,13 @@ function StatusColumn({ title, subtitle, items }: { title: string; subtitle: str
     <header><span>{title}</span><small>{subtitle}</small></header>
     <div className="eic-status-track">{items.map((item) => <i key={item.label} className={statusTone(item.label)} style={{ width: `${total ? (item.value / total) * 100 : 0}%` }} title={`${item.label}: ${item.value}`} />)}</div>
     <div className="eic-status-list">{items.slice(0, 5).map((item) => <span key={item.label}><i className={statusTone(item.label)} /><b>{item.label}</b><strong>{item.value.toLocaleString("es-MX")}</strong></span>)}</div>
+  </article>;
+}
+
+function AuthorizedMetric({ label, value }: { label: string; value: number | null }) {
+  return <article className={value === null ? "is-pending" : undefined}>
+    <span>{label}</span>
+    <strong>{displayValue(value)}</strong>
+    {value === null && <small>Pendiente del nuevo SQL</small>}
   </article>;
 }

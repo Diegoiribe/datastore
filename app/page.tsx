@@ -48,6 +48,7 @@ function reportFamily(category: CategoryOption) {
   if (category.key === "staff_collection") return { label: "Colección", description: "Reportes de capacitación del equipo Staff" };
   if (category.collectionKey === "staff") return { label: "Talento", description: "Seguimiento de capacitación corporativa" };
   if (category.key === "encuesta_de_satisfaccion") return { label: "Experiencia", description: "Satisfacción, recomendación y voz del participante" };
+  if (category.key === "eic_administrativa") return { label: "Gestión", description: "Presupuesto y operación de la Dirección de Administración GC" };
   if (category.key === "staff") return { label: "Talento", description: "Seguimiento de capacitación corporativa" };
   return { label: "Avance", description: "Cumplimiento, asignaciones y cursos pendientes" };
 }
@@ -56,6 +57,7 @@ function reportTone(key: string) {
   const preferred: Record<string, string> = {
     almacenista: "cobalt", asesor: "forest", cajero: "coral", cobranza: "ink",
     encuesta_de_satisfaccion: "violet", gerente: "sand", gerente_zona: "ink", staff: "cobalt",
+    eic_administrativa: "cobalt",
   };
   if (preferred[key]) return preferred[key];
   const tones = ["ink", "cobalt", "violet", "coral", "sand", "forest"];
@@ -239,7 +241,7 @@ export default function Home() {
     listCategories()
       .then((items) => {
         if (items.length) {
-          setCategories(items.map(({ key, label, collectionKey, collectionLabel, history }) => ({ key, label, collectionKey, collectionLabel, history })));
+          setCategories(items.map(({ key, label, collectionKey, collectionLabel, history }) => ({ key, label: key === "eic_administrativa" ? "Dirección de Administración GC" : label, collectionKey, collectionLabel, history })));
           setSelectedCategories((current) => current.filter((key) => items.some((item) => item.key === key)));
           const latestPeriod = items.flatMap((item) => Object.keys(item.history ?? {})).sort().at(-1);
           if (latestPeriod) {
@@ -744,7 +746,7 @@ export default function Home() {
               {reportIsSurvey && <div className="survey-letterhead-top">
                 <div className="survey-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa" /></div>
               </div>}
-              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && <span className="eyebrow">{displayEic ? "GESTIÓN DE CAPACITACIÓN" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{reportIsSurvey ? "Satisfacción" : displayEic ? "Estatus de planes de capacitación" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && <span className="eyebrow">{displayEic ? "PLANES DE CAPACITACIÓN" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{reportIsSurvey ? "Satisfacción" : displayEic ? "Dirección de Administración GC" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
             {reportLoading ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
