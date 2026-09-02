@@ -20,6 +20,13 @@ const rubricFields = [
   ["Ambiente y participación", "participacion_suma", "participacion_n"],
   ["Resolución de dudas", "resolucion_suma", "resolucion_n"],
 ] as const;
+const ddcProgram = "Diálogos de Calidad (DDC)";
+const ddcRubricFields = [
+  ["Experiencia del Día 1", "interes_suma", "interes_n"],
+  ["Preparación de entrenadores", "dominio_suma", "dominio_n"],
+  ["Cumplimiento del objetivo", "participacion_suma", "participacion_n"],
+  ["Atención del equipo coordinador", "resolucion_suma", "resolucion_n"],
+] as const;
 const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
 function aggregate(rows: SatisfactionMetricRow[]): Totals {
@@ -108,12 +115,11 @@ function OpportunityPlan({ items }: { items: SatisfactionComment[] }) {
     groups.set(theme, current);
     return groups;
   }, new Map<string, { theme: string; count: number; proposal: string; example: string }>()).values()]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
+    .sort((a, b) => b.count - a.count);
   const opportunityCount = actions.reduce((total, item) => total + item.count, 0);
   return <section className="opportunity-plan">
     <div className="opportunity-plan-heading"><div><span>Propuestas</span><small>Acciones sugeridas a partir de las oportunidades detectadas</small></div><b>{opportunityCount.toLocaleString("es-MX")} menciones</b></div>
-    {actions.length ? <div className="opportunity-actions">{actions.map((item) => <article key={item.theme}><div><span>{item.theme}</span><b>{item.count.toLocaleString("es-MX")}</b></div><p>{item.proposal}</p>{item.example && <small>Señal detectada: “{item.example}”</small>}</article>)}</div> : <p className="opportunity-empty">No se detectaron comentarios clasificados como oportunidad en esta selección.</p>}
+    {actions.length ? <div className="opportunity-actions">{actions.map((item) => <details key={item.theme}><summary><span>{item.theme}</span><b>{item.count.toLocaleString("es-MX")}</b><i aria-hidden="true" /></summary><div><p><strong>Acción sugerida</strong>{item.proposal}</p>{item.example && <small><strong>Señal detectada</strong>“{item.example}”</small>}</div></details>)}</div> : <p className="opportunity-empty">No se detectaron comentarios clasificados como oportunidad en esta selección.</p>}
   </section>;
 }
 
@@ -183,6 +189,8 @@ export default function SatisfactionReport({ dashboard, details, detailsError = 
   const matchesDimensions = (row: SatisfactionMetricRow) => (program === "all" || row.programa === program) && (region === "all" || row.region === region);
   const prefiltered = rows.filter((row) => matchesPeriod(row) && matchesDimensions(row));
   const filtered = prefiltered.filter((row) => !selectedInstructorKeys.length || selectedInstructorKeys.includes(instructorKey(row.instructor)));
+  const usesDdcRubrics = filtered.length > 0 && filtered.every((row) => row.programa === ddcProgram);
+  const activeRubricFields = usesDdcRubrics ? ddcRubricFields : rubricFields;
   const totals = aggregate(filtered);
   const isaValue = isa(totals);
   const npsValue = nps(totals);
@@ -192,7 +200,7 @@ export default function SatisfactionReport({ dashboard, details, detailsError = 
   const selectionReady = periodReady && (instructorMode ? selectedInstructorKeys.length > 0 : program !== "");
   const selectedCourses = unique(filtered, "curso");
   const courseTitle = selectedCourses.length === 0 ? "Curso" : selectedCourses.length <= 3 ? selectedCourses.join(" · ") : `${selectedCourses[0]} y ${selectedCourses.length - 1} cursos más`;
-  const rubricRows = rubricFields.map(([label, sumField, countField]) => { const sum = filtered.reduce((value, row) => value + Number(row[sumField] || 0), 0); const count = filtered.reduce((value, row) => value + Number(row[countField] || 0), 0); return { label, count, value: count ? (sum / (count * 5)) * 100 : 0 }; }).filter((item) => item.count).sort((a, b) => b.value - a.value);
+  const rubricRows = activeRubricFields.map(([label, sumField, countField]) => { const sum = filtered.reduce((value, row) => value + Number(row[sumField] || 0), 0); const count = filtered.reduce((value, row) => value + Number(row[countField] || 0), 0); return { label, count, value: count ? (sum / (count * 5)) * 100 : 0 }; }).filter((item) => item.count).sort((a, b) => b.value - a.value);
   const selectedPeriod = year !== "all" && month !== "all" ? `${year}-${month}` : null;
   const trendBase = rows.filter((row) => matchesDimensions(row) && (year === "all" || row.mes.startsWith(year)) && (!selectedInstructorKeys.length || selectedInstructorKeys.includes(instructorKey(row.instructor))) && (!selectedPeriod || row.mes <= selectedPeriod));
   const trend = unique(trendBase, "mes").map((label) => { const value = aggregate(trendBase.filter((row) => row.mes === label)); return { label, responses: value.respuestas, isa: isa(value) }; }).slice(-12);
@@ -241,20 +249,23 @@ export default function SatisfactionReport({ dashboard, details, detailsError = 
 
   const inlineInsight = (title: string, insightRows: SatisfactionMetricRow[], insightDetails: SatisfactionComment[], historyRows = insightRows, historyDetails = insightDetails, detailType: "instructor" | "program" | "program-default" | "instructor-summary" = "instructor") => {
     const value = aggregate(insightRows);
-    const programRubricCards = [rubricFields[0], rubricFields[1], rubricFields[3], rubricFields[4]].map(([label, sumField, countField]) => { const sum = insightRows.reduce((total, row) => total + Number(row[sumField] || 0), 0); const count = insightRows.reduce((total, row) => total + Number(row[countField] || 0), 0); return { label: label === "Ambiente y participación" ? "Participación e interacción" : label, score: count ? sum / count : null, count }; });
+    const isDdcInsight = insightRows.length > 0 && insightRows.every((row) => row.programa === ddcProgram);
+    const insightRubricFields = isDdcInsight ? ddcRubricFields : rubricFields;
+    const cardRubricFields = isDdcInsight ? ddcRubricFields : [rubricFields[0], rubricFields[1], rubricFields[3], rubricFields[4]];
+    const programRubricCards = cardRubricFields.map(([label, sumField, countField]) => { const sum = insightRows.reduce((total, row) => total + Number(row[sumField] || 0), 0); const count = insightRows.reduce((total, row) => total + Number(row[countField] || 0), 0); return { label: label === "Ambiente y participación" ? "Participación e interacción" : label, score: count ? sum / count : null, count }; });
     const detailSource = insightDetails.some((item) => item.record_type === "theme") ? insightDetails.filter((item) => item.record_type === "theme") : insightDetails.filter((item) => item.record_type === "comment");
     const historyDetailSource = historyDetails.some((item) => item.record_type === "theme") ? historyDetails.filter((item) => item.record_type === "theme") : historyDetails.filter((item) => item.record_type === "comment");
     const periods = [...new Set(historyDetailSource.map((item) => item.mes).filter(Boolean))].sort();
     const latestPeriod = periods.at(-1); const previousPeriod = periods.at(-2);
     const commentTopics = [...detailSource.reduce((groups, item) => { const current = groups.get(item.theme) ?? { label: item.theme, count: 0, example: item.example }; current.count += Number(item.count || 1); if (!current.example && item.example) current.example = item.example; groups.set(item.theme, current); return groups; }, new Map<string, { label: string; count: number; example: string }>()).values()].sort((a, b) => b.count - a.count).slice(0, 5).map((item) => { const countAt = (period?: string, theme?: string) => historyDetailSource.filter((row) => row.mes === period && (!theme || row.theme === theme)).reduce((total, row) => total + Number(row.count || 1), 0); const currentTotal = countAt(latestPeriod); const previousTotal = countAt(previousPeriod); const currentShare = currentTotal ? (countAt(latestPeriod, item.label) / currentTotal) * 100 : 0; const previousShare = previousTotal ? (countAt(previousPeriod, item.label) / previousTotal) * 100 : 0; return { ...item, trend: previousPeriod && currentTotal && previousTotal ? Number((currentShare - previousShare).toFixed(1)) : null, unit: " pp" }; });
     const rowPeriods = unique(historyRows, "mes"); const latestRowPeriod = rowPeriods.at(-1); const previousRowPeriod = rowPeriods.at(-2);
-    const rubricTopics = rubricFields.map(([label, sumField, countField]) => { const selected = insightRows.reduce((total, row) => total + Number(row[countField] || 0), 0); const periodScore = (period?: string) => { const periodRows = historyRows.filter((row) => row.mes === period); const sum = periodRows.reduce((total, row) => total + Number(row[sumField] || 0), 0); const count = periodRows.reduce((total, row) => total + Number(row[countField] || 0), 0); return count ? (sum / (count * 5)) * 100 : null; }; const current = periodScore(latestRowPeriod); const previous = periodScore(previousRowPeriod); return { label, count: selected, trend: current !== null && previous !== null ? Number((current - previous).toFixed(1)) : null, unit: " pp", example: "" }; }).filter((item) => item.count).sort((a, b) => b.count - a.count);
+    const rubricTopics = insightRubricFields.map(([label, sumField, countField]) => { const selected = insightRows.reduce((total, row) => total + Number(row[countField] || 0), 0); const periodScore = (period?: string) => { const periodRows = historyRows.filter((row) => row.mes === period); const sum = periodRows.reduce((total, row) => total + Number(row[sumField] || 0), 0); const count = periodRows.reduce((total, row) => total + Number(row[countField] || 0), 0); return count ? (sum / (count * 5)) * 100 : null; }; const current = periodScore(latestRowPeriod); const previous = periodScore(previousRowPeriod); return { label, count: selected, trend: current !== null && previous !== null ? Number((current - previous).toFixed(1)) : null, unit: " pp", example: "" }; }).filter((item) => item.count).sort((a, b) => b.count - a.count);
     const hasCommentTopics = commentTopics.length > 0; const topics = hasCommentTopics ? commentTopics : rubricTopics;
     const mentionTotal = detailSource.reduce((total, item) => total + Number(item.count || 1), 0);
     return <section className="inline-insight">
       <header><div><small>{detailType === "instructor-summary" ? "RESUMEN" : "DETALLE DE LA SELECCIÓN"}</small><h5>{title}</h5></div><span>{value.respuestas.toLocaleString("es-MX")} encuestas</span></header>
-      <div className={`inline-metrics${detailType === "program" || detailType === "instructor-summary" ? " rubric-metrics" : ""}`}>
-        {detailType === "program" || detailType === "instructor-summary" ? programRubricCards.map((item) => <article key={item.label}>
+      <div className={`inline-metrics${detailType === "program" || detailType === "program-default" || detailType === "instructor-summary" ? " rubric-metrics" : ""}`}>
+        {detailType === "program" || detailType === "program-default" || detailType === "instructor-summary" ? programRubricCards.map((item) => <article key={item.label}>
           <span>{item.label}</span><strong>{item.score === null ? "—" : item.score.toFixed(2)}</strong>
           {item.score !== null && <span className="star-rating" title={`${item.score.toFixed(2)} de 5`} aria-label={`${item.score.toFixed(2)} de 5 estrellas`}><span className="stars-base" aria-hidden="true">★★★★★</span><span className="stars-fill" aria-hidden="true" style={{ width: `${(item.score / 5) * 100}%` }}>★★★★★</span></span>}
           <small>{item.score === null ? "Sin respuestas" : `${item.count.toLocaleString("es-MX")} respuestas`}</small>
@@ -265,6 +276,7 @@ export default function SatisfactionReport({ dashboard, details, detailsError = 
         </>}
       </div>
       <section className="topic-summary"><div className="topic-heading"><div><span>{hasCommentTopics ? "Temas mencionados" : "Rubros evaluados"}</span><small>{hasCommentTopics ? "Frecuencia y cambio contra el periodo anterior" : "Evaluaciones y variación de puntaje contra el periodo anterior"}</small></div><b>{hasCommentTopics ? `${mentionTotal.toLocaleString("es-MX")} menciones` : `${value.respuestas.toLocaleString("es-MX")} encuestas`}</b></div><div className="topic-table"><div className="topic-table-head"><span>{hasCommentTopics ? "Tema" : "Rubro"}</span><span>{hasCommentTopics ? "Menciones" : "Evaluaciones"}</span><span>Tendencia</span></div>{topics.map((item) => <div className="topic-row" key={item.label}><strong>{item.label}</strong><span>{item.count.toLocaleString("es-MX")}</span><span className={item.trend === null ? "up" : item.trend === 0 ? "steady" : item.trend > 0 ? "up" : "down"}>{item.trend === null ? "↑ Nuevo" : item.trend === 0 ? "— Estable" : `${item.trend > 0 ? "↑" : "↓"} ${Math.abs(item.trend)}${item.unit}`}</span></div>)}</div>{hasCommentTopics && commentTopics[0]?.example && <p className="topic-example"><strong>Comentario representativo:</strong> “{commentTopics[0].example}”</p>}</section>
+      <OpportunityPlan items={insightDetails} />
     </section>;
   };
 
