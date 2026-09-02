@@ -1186,7 +1186,7 @@ html, body { background: #fff; }
 .opportunity-actions article p { margin: 9px 0 0; color: #3f4650; font-size: 8px; line-height: 1.55; }
 .opportunity-actions article small { display: block; margin-top: 9px; color: #777f89; font-size: 7px; line-height: 1.5; }
 .opportunity-empty { margin: 0; padding: 13px; border: 1px solid #e2e2e6; border-radius: 11px; background: #fafafa; color: #77777d; font-size: 8px; line-height: 1.55; }
-.course-voice .opportunity-plan { margin-top: 16px; }
+.tone-tabs + .opportunity-plan { margin-top: 0; }
 .inline-metrics span, .inline-metrics small, .inline-analysis span, .inline-analysis small { display: block; color: #85858b; font-size: 8px; }
 .inline-metrics strong { display: block; margin: 10px 0 6px; font-size: 22px; letter-spacing: -.035em; }
 .inline-analysis strong { display: block; margin: 9px 0 6px; overflow-wrap: anywhere; font-size: 12px; }
@@ -1397,7 +1397,7 @@ html, body { background: #fff; }
 .library-content > header span { font-size: 23px; font-weight: 690; letter-spacing: -.04em; }
 .library-content > header small { margin-top: 7px; color: #89898f; font-size: 11px; }
 .library-content > header b { color: #a0a0a6; font-size: 12px; }
-.book-library-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 58px 64px; }
+.book-library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 52px 40px; }
 .book-card {
   min-width: 0;
   display: flex;
@@ -1484,9 +1484,11 @@ html, body { background: #fff; }
 .report-cover::after { position: absolute; width: 190px; height: 190px; right: -80px; bottom: -65px; border: 1px solid rgba(255,255,255,.2); border-radius: 50%; content: ""; }
 .cover-rule { width: 30px; height: 3px; margin-bottom: 35px; background: currentColor; opacity: .78; }
 .report-cover > small { position: relative; z-index: 1; font-size: 8px; font-weight: 760; letter-spacing: .16em; text-transform: uppercase; opacity: .72; }
-.report-cover > strong { position: relative; z-index: 1; max-width: 96%; margin-top: 10px; overflow-wrap: anywhere; font-size: clamp(24px, 2.55vw, 35px); line-height: .94; letter-spacing: -.058em; }
+.report-cover > strong { position: relative; z-index: 1; max-width: 94%; margin-top: 10px; overflow-wrap: anywhere; font-size: clamp(20px, 2.15vw, 29px); line-height: .97; letter-spacing: -.055em; }
+.report-cover.artwork-tienda > strong,
+.report-cover.artwork-staff_collection > strong { max-width: 100%; font-size: clamp(27px, 3vw, 38px); line-height: .92; }
 .report-cover > i { position: absolute; right: 17px; bottom: 37px; z-index: 1; font-size: 40px; font-style: normal; font-weight: 760; letter-spacing: -.09em; opacity: .16; }
-.report-cover > i::before { position: absolute; width: 72px; height: 72px; right: -25px; top: -39px; border: 2px solid var(--cover-arc); border-bottom-color: transparent; border-left-color: transparent; border-radius: 50%; transform: rotate(-20deg); content: ""; }
+.report-cover > i::before { position: absolute; width: 68px; height: 68px; left: 50%; top: 50%; border: 2px solid var(--cover-arc); border-radius: 50%; transform: translate(-50%, -50%); content: ""; }
 .report-cover > em { position: relative; z-index: 1; margin-top: auto; font-size: 6px; font-style: normal; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; opacity: .66; }
 .report-cover.tone-ink { background: linear-gradient(145deg, #101114, #34353b); }
 .report-cover.tone-cobalt { background: linear-gradient(145deg, #1557d5, #72a1ff); }
@@ -1639,6 +1641,8 @@ html, body { background: #fff; }
   .book-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 35px 19px; }
   .report-cover { padding: 16px 13px 14px 18px; }
   .report-cover > strong { font-size: 20px; }
+  .report-cover.artwork-tienda > strong,
+  .report-cover.artwork-staff_collection > strong { font-size: 25px; }
   .book-card-copy { padding-top: 17px; }
   .book-card-copy > strong { font-size: 12px; }
   .library-footer { min-height: 0; grid-template-columns: 1fr; gap: 24px; padding: 34px 18px; }
