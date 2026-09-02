@@ -1620,7 +1620,8 @@ html, body { background: #fff; }
   .eic-category-head { grid-template-columns: minmax(0, 1fr) auto; }
   .eic-category-head span:nth-child(2) { display: none; }
   .eic-category-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; padding-block: 13px; }
-  .eic-category-row > span { grid-column: 1 / -1; grid-row: 2; }
+  .eic-category-row > span { grid-template-columns: 47px minmax(0, 1fr); grid-column: 1 / -1; grid-row: 2; }
+  .eic-category-row > span em { text-align: left; }
   .eic-category-row > strong:last-child { grid-column: 2; grid-row: 1; }
   .eic-initiative-head { display: none; }
   .eic-initiative-list > article { grid-template-columns: 44px minmax(0, 1fr); padding: 12px 0; }
