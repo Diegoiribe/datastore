@@ -33,8 +33,8 @@ const institutionalPalette = {
 };
 const satisfactionPalette = {
   accent: "#F0D224",
-  secondary: "#7380A6",
-  deep: "#3F4D73",
+  secondary: "#93C5FD",
+  deep: "#5275A3",
 };
 
 function textKey(value: string) {

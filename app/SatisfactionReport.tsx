@@ -11,7 +11,7 @@ import PopupFilter from "./ToolbarPopupFilter";
 
 type Totals = {
   respuestas: number; scoreSum: number; scoreCount: number; npsValid: number;
-  promoters: number; passives: number; detractors: number;
+  promoters: number; passives: number; detractors: number; comments: number;
 };
 
 const rubricFields = [
@@ -34,8 +34,9 @@ function aggregate(rows: SatisfactionMetricRow[]): Totals {
     total.promoters += Number(row.promotores || 0);
     total.passives += Number(row.pasivos || 0);
     total.detractors += Number(row.detractores || 0);
+    total.comments += Number(row.comentarios || 0);
     return total;
-  }, { respuestas: 0, scoreSum: 0, scoreCount: 0, npsValid: 0, promoters: 0, passives: 0, detractors: 0 });
+  }, { respuestas: 0, scoreSum: 0, scoreCount: 0, npsValid: 0, promoters: 0, passives: 0, detractors: 0, comments: 0 });
 }
 function isa(total: Totals) { return total.scoreCount ? (total.scoreSum / (total.scoreCount * 5)) * 100 : 0; }
 function nps(total: Totals) { return total.npsValid ? ((total.promoters - total.detractors) / total.npsValid) * 100 : 0; }
@@ -43,6 +44,10 @@ function metricTone(value: number) { return value >= 90 ? "good" : value >= 80 ?
 function textKey(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, " ").trim(); }
 function instructorName(value: string) { return String(value || "").trim() || "Sin instructor"; }
 function instructorKey(value: string) { return textKey(instructorName(value)); }
+function isSubstantiveComment(value: string | null | undefined) {
+  const normalized = textKey(String(value || "")).replace(/^[\s.,:;!?-]+|[\s.,:;!?-]+$/g, "");
+  return normalized.length >= 4 && !/^(?:no|ningun[oa]?|n a|no aplica|sin comentarios?|ningun comentario|no tengo(?: ningun)? comentarios?|no hay comentarios?|sin comentario adicional)$/.test(normalized);
+}
 function unique(rows: SatisfactionMetricRow[], field: "mes" | "programa" | "curso" | "instructor" | "region") {
   return [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
 }
@@ -70,12 +75,12 @@ function normalizeComment(item: SatisfactionComment): SatisfactionComment {
   const text = String(raw.comentario ?? raw.example ?? "");
   const normalized = textKey(text);
   const positiveScore = ["excelente", "bueno", "buen ", "muy bien", "claro", "dinamic", "practic", "gracias", "recomiendo", "util", "ameno", "amena", "participativo", "participativa", "gran talento", "ideal", "conocedor", "dominio", "atento", "atenta", "entusiasmad", "me agrado", "agradec", "carisma", "inspira", "confianza"].filter((word) => normalized.includes(word)).length;
-  const negativeScore = [/\bfalta(?:n|ba)?\b/, /\bhace falta\b/, /\bdeb(?:e|en|eria|erian) (?:mejorar|tener|agregar|incluir|cambiar)\b/, /\bse deb(?:e|eria) (?:mejorar|agregar|incluir|cambiar)\b/, /\bnecesita(?:n|mos)?\b/, /\bno (?:fue|es|esta|estuvo|me parecio )?(?:bueno|claro|util|dinamic[oa]|practic[oa]|ameno|amena)\b/, /\bno (?:explica|comunica|funciona|ayuda|resuelve|cumple)\b/, /\bnunca (?:explica|comunica|resuelve|contesta|ayuda)\b/, /\bmal estado\b/, /\bproblema(?:s)?\b/, /\bdeficiente\b/, /\bconfus[oa]\b/, /\bdificil de (?:entender|seguir|comprender)\b/, /\b(?:demasiado|excesivamente) (?:rapido|lento)\b/, /\b(?:explica|habla|avanza|va|ritmo) muy (?:rapido|lento)\b/, /\bpoco tiempo\b/, /\bmas practica\b/, /\bpuede(?:n)? mejorar\b/, /\bpodria(?:n)? mejorar\b/, /\bmas equipos?\b/, /\bmejorar (?:el|la|los|las) (?:equipo|equipos|material|materiales|instalacion|instalaciones|contenido|curso|audio|computadora|computadoras)\b/].filter((pattern) => pattern.test(normalized)).length;
+  const negativeScore = [/\bfalta(?:n|ba)?\b/, /\bhace falta\b/, /\bdeb(?:e|en|eria|erian) (?:mejorar|tener|agregar|incluir|cambiar)\b/, /\bse deb(?:e|eria) (?:mejorar|agregar|incluir|cambiar)\b/, /\bnecesita(?:n|mos)?\b/, /\bno (?:fue |es |esta |estuvo |me parecio )?(?:bueno|claro|util|dinamic[oa]|practic[oa]|ameno|amena)\b/, /\bno (?:explica|comunica|funciona|ayuda|resuelve|cumple)\b/, /\bnunca (?:explica|comunica|resuelve|contesta|ayuda)\b/, /\bmal estado\b/, /\bproblema(?:s)?\b/, /\bdeficiente\b/, /\bconfus[oa]\b/, /\bdificil de (?:entender|seguir|comprender)\b/, /\b(?:demasiado|excesivamente) (?:rapido|lento)\b/, /\b(?:explica|habla|avanza|va|ritmo) muy (?:rapido|lento)\b/, /\bpoco tiempo\b/, /\bmas practica\b/, /\bpuede(?:n)? mejorar\b/, /\bpodria(?:n)? mejorar\b/, /\bmas equipos?\b/, /\bmejorar (?:el|la|los|las) (?:equipo|equipos|material|materiales|instalacion|instalaciones|contenido|curso|audio|computadora|computadoras)\b/].filter((pattern) => pattern.test(normalized)).length;
   const inferredSentiment = negativeScore > 0 ? "negative" : positiveScore > 0 ? "positive" : "neutral";
   const positive = inferredSentiment === "positive";
   const negative = inferredSentiment === "negative";
   const theme = raw.theme || (normalized.match(/equipo|material|herramient|computadora/) ? "Equipo y materiales" : normalized.match(/clar|explica|comprend|comunic/) ? "Explicación clara" : normalized.match(/dominio|conocimiento|preparad/) ? "Dominio del tema" : normalized.match(/dinamic|particip|actividad|practic/) ? "Dinámica y participación" : normalized.match(/duda|atencion|apoyo|amable/) ? "Atención y dudas" : normalized.match(/tiempo|duracion|ritmo/) ? "Duración y ritmo" : positive ? "Valoración positiva" : negative ? "Mejora general" : "Comentario general");
-  const sentiment = raw.record_type === "theme" ? raw.sentiment ?? inferredSentiment : inferredSentiment;
+  const sentiment = raw.sentiment ?? inferredSentiment;
   return { ...item, record_type: raw.record_type ?? "comment", mes: raw.mes ?? String(raw.fecha ?? "").slice(0, 7), sentiment, theme, count: Number(raw.count ?? 1), example: raw.example ?? text };
 }
 
@@ -133,7 +138,7 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
   useEffect(() => {
     let active = true;
     loadDashboardDetails(dashboard)
-      .then((items) => { if (active) setComments(items.map(normalizeComment)); })
+      .then((items) => { if (active) setComments(items.map(normalizeComment).filter((item) => isSubstantiveComment(item.comentario ?? item.example))); })
       .catch((error: Error) => { if (active) setCommentsError(error.message); });
     return () => { active = false; };
   }, [dashboard]);
@@ -175,8 +180,8 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
   const programDetailMatches = (item: SatisfactionComment, label: string) => (year === "all" || item.mes.startsWith(year)) && (month === "all" || item.mes.slice(5, 7) === month) && item.programa === label && (region === "all" || item.region === region) && (!selectedInstructorKeys.length || selectedInstructorKeys.includes(instructorKey(item.instructor)));
   const trendDetailMatches = (item: SatisfactionComment) => (program === "all" || item.programa === program) && (region === "all" || item.region === region) && (year === "all" || item.mes.startsWith(year)) && (!selectedPeriod || item.mes <= selectedPeriod) && (!selectedInstructorKeys.length || selectedInstructorKeys.includes(instructorKey(item.instructor)));
   const matchingDetails = comments.filter(detailMatches);
-  const recentComments = matchingDetails.filter((item) => item.record_type === "comment" && (commentTone === "all" || item.sentiment === commentTone) && item.comentario && !/^(ningun[oa]|no|n\/?a|sin comentarios?)[.! ]*$/i.test(item.comentario.trim()));
-  const matchingThemes = matchingDetails.filter((item) => item.record_type === "theme" && (commentTone === "all" || item.sentiment === commentTone));
+  const recentComments = matchingDetails.filter((item) => item.record_type === "comment" && (commentTone === "all" || item.sentiment === commentTone) && isSubstantiveComment(item.comentario));
+  const matchingThemes = matchingDetails.filter((item) => item.record_type === "theme" && (commentTone === "all" || item.sentiment === commentTone) && isSubstantiveComment(item.example));
   const voiceTotal = matchingThemes.reduce((total, item) => total + Number(item.count || 1), 0) || recentComments.length;
   const representativeComments = matchingThemes.filter((item) => item.example).map((item) => ({ ...item, comentario: item.example }));
   const visibleVoiceComments = recentComments.length ? recentComments : representativeComments;
@@ -191,7 +196,7 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
     const scopedDetails = exactDetails.length ? exactDetails : instructorCourseDetails.filter((item) => programs.includes(item.programa));
     const recentCommentCount = scopedDetails.filter((item) => item.record_type === "comment" && item.comentario).length;
     const themeCommentCount = scopedDetails.filter((item) => item.record_type === "theme" && item.example).reduce((total, item) => total + Number(item.count || 1), 0);
-    const commentCount = themeCommentCount || recentCommentCount;
+    const commentCount = Math.max(value.comments, themeCommentCount || recentCommentCount);
     return { label, programs, programLabel: programs.join(" · "), responses: value.respuestas, commentCount, isa: isa(value), nps: nps(value), contributorCount: contributorKeys.length, isTeam: contributorKeys.length > 1 };
   }).filter((item) => item.responses > 0).sort((a, b) => b.responses - a.responses || a.label.localeCompare(b.label, "es"));
   const selectedInstructorNames = selectedInstructorKeys.map((key) => instructorLabels.get(key) ?? key);
@@ -237,8 +242,8 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
     const exactCourseDetails = instructorCourseDetails.filter((item) => textKey(item.curso) === textKey(courseLabel));
     const programDetails = instructorCourseDetails.filter((item) => coursePrograms.includes(item.programa));
     const scopedDetails = exactCourseDetails.length ? exactCourseDetails : programDetails;
-    const recentCourseComments = scopedDetails.filter((item) => item.record_type === "comment" && item.comentario && !/^(ningun[oa]|no|n\/?a|sin comentarios?)[.! ]*$/i.test(item.comentario.trim()));
-    const representativeThemes = scopedDetails.filter((item) => item.record_type === "theme" && item.example).map((item) => ({ ...item, comentario: item.example }));
+    const recentCourseComments = scopedDetails.filter((item) => item.record_type === "comment" && isSubstantiveComment(item.comentario));
+    const representativeThemes = scopedDetails.filter((item) => item.record_type === "theme" && isSubstantiveComment(item.example)).map((item) => ({ ...item, comentario: item.example }));
     const usesRepresentativeComments = recentCourseComments.length === 0 && representativeThemes.length > 0;
     const allCourseComments = usesRepresentativeComments ? representativeThemes : recentCourseComments;
     const themeCount = scopedDetails.filter((item) => item.record_type === "theme").reduce((total, item) => total + Number(item.count || 1), 0);

@@ -30,6 +30,7 @@ export type SatisfactionMetricRow = {
   pasivos: number;
   detractores: number;
   respuestas_cinco: number;
+  comentarios?: number;
   nps_maximas?: number;
   primera_respuesta: string;
   ultima_respuesta: string;
