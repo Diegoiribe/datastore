@@ -675,7 +675,7 @@ export default function Home() {
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
               </div>}
-              <div className="sheet-title-copy"><span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              <div className="sheet-title-copy">{(openBook !== "tienda" || peopleMode) && <span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
               {activeSurvey && <AccentPicker value={surveyAccent} open={surveyAccentPickerOpen} onOpenChange={setSurveyAccentPickerOpen} onChange={setSurveyAccent} label="Mostrar paletas de la encuesta" />}
             </header>
 
