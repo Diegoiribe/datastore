@@ -312,10 +312,21 @@ export default function Home() {
     if (!selectedCategories.length) {
       return () => { active = false; };
     }
+    const selectedOptions = categories.filter((category) => selectedCategories.includes(category.key));
+    const combinesTrainingPlans = selectedOptions.length > 1 && selectedOptions.every((category) =>
+      category.key === "eic_administrativa" || Boolean(category.collectionKey && trainingPlansCollectionKeys.has(category.collectionKey))
+    );
     // A period/category change starts a new remote dashboard synchronization.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    Promise.all(selectedCategories.map((category) => loadCategoryDashboard(category, period)))
+    Promise.all(selectedCategories.map((category) => {
+      const option = selectedOptions.find((item) => item.key === category);
+      const latestAvailablePeriod = Object.keys(option?.history ?? {}).sort().at(-1);
+      const categoryPeriod = combinesTrainingPlans && !option?.history?.[period]
+        ? latestAvailablePeriod ?? period
+        : period;
+      return loadCategoryDashboard(category, categoryPeriod);
+    }))
       .then(async (loaded) => {
         const survey = loaded.length === 1 && loaded[0].dataKind === "satisfaction" ? loaded[0] : null;
         let details: SatisfactionComment[] = [];
@@ -345,7 +356,7 @@ export default function Home() {
       })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [period, requestKey, selectedCategories]);
+  }, [categories, period, requestKey, selectedCategories]);
 
   const activeSurvey = dashboards.length === 1 && dashboards[0].dataKind === "satisfaction" ? dashboards[0] : null;
   const activeEicDashboards = dashboards.length > 0 && dashboards.every((dashboard) => dashboard.dataKind === "eic_administrative")
@@ -592,8 +603,11 @@ export default function Home() {
     : usingDemo
       ? "No se encontraron datos publicados para los filtros seleccionados"
       : `Última sincronización: ${lastSyncAt?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) ?? "ahora"}`;
+  const eicCutoffs = [...new Set(activeEicDashboards.map((dashboard) => dashboard.cutoffDate || dashboard.period))];
   const reportPeriodLabel = displayEic
-    ? `Corte ${displayEic.cutoffDate || displayEic.period}`
+    ? eicCutoffs.length > 1
+      ? "Último corte por dirección"
+      : `Corte ${eicCutoffs[0]}`
     : tiendaPeriodReady ? period : "Selecciona periodo";
 
   const downloadReportHtml = async () => {
