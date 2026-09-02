@@ -86,9 +86,9 @@ const rankingColumns: Array<{ key: RankingColumnKey; label: string; numeric?: bo
 ];
 
 export default function EicStatusReport({
-  dashboard,
+  dashboards,
 }: {
-  dashboard: CategoryDashboard;
+  dashboards: CategoryDashboard[];
 }) {
   const [views, setViews] = useState<EicAdministrativeViews>({});
   const [loading, setLoading] = useState(true);
@@ -102,15 +102,31 @@ export default function EicStatusReport({
   const [rankingOptionalSlots, setRankingOptionalSlots] = useState(4);
   const authorizedWindowRef = useRef<HTMLDivElement>(null);
   const rankingTableRef = useRef<HTMLDivElement>(null);
+  const primaryDashboard = dashboards[0];
 
   useEffect(() => {
     let active = true;
-    loadAdministrativeViews(dashboard)
-      .then((loaded) => { if (active) setViews(loaded); })
+    Promise.all(dashboards.map(async (dashboard) => ({
+      category: dashboard.category,
+      views: await loadAdministrativeViews(dashboard),
+    })))
+      .then((loadedDashboards) => {
+        if (!active) return;
+        const merged = loadedDashboards.reduce<EicAdministrativeViews>((result, loaded) => {
+          Object.entries(loaded.views).forEach(([view, rows]) => {
+            result[view] = [
+              ...(result[view] ?? []),
+              ...rows.map((row) => ({ ...row, __source_category: loaded.category })),
+            ];
+          });
+          return result;
+        }, {});
+        setViews(merged);
+      })
       .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "No se pudieron cargar las vistas administrativas."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [dashboard]);
+  }, [dashboards]);
 
   useEffect(() => {
     const node = authorizedWindowRef.current;
@@ -210,15 +226,18 @@ export default function EicStatusReport({
   const paymentStatus = useMemo(() => groupStatus(paymentRows, "estatus_pago", "movimientos"), [paymentRows]);
 
   const totals = useMemo(() => {
-    if (cLevel === "all" && views.general?.[0]) {
-      const general = views.general[0];
+    if (cLevel === "all" && views.general?.length) {
+      const general = views.general;
+      const budget = sum(general, "presupuesto_autorizado_mxn");
+      const investment = sum(general, "inversion_actual_mxn");
+      const charged = sum(general, "cargado_al_centro_mxn");
       return {
-        budget: number(general, "presupuesto_autorizado_mxn"),
-        investment: number(general, "inversion_actual_mxn"),
-        charged: number(general, "cargado_al_centro_mxn"),
-        remaining: number(general, "presupuesto_por_ejercer_mxn"),
-        budgetProgress: number(general, "avance_presupuesto"),
-        accountingProgress: number(general, "avance_contable"),
+        budget,
+        investment,
+        charged,
+        remaining: budget - investment,
+        budgetProgress: budget ? investment / budget : 0,
+        accountingProgress: budget ? charged / budget : 0,
       };
     }
     const budget = sum(filteredDirections, "presupuesto_autorizado_mxn");
@@ -235,7 +254,7 @@ export default function EicStatusReport({
   }, [cLevel, filteredDirections, views.general]);
 
   const operational = useMemo(() => {
-    const rows = cLevel === "all" && views.general?.[0] ? [views.general[0]] : filteredDirections;
+    const rows = cLevel === "all" && views.general?.length ? views.general : filteredDirections;
     return {
       needs: sum(rows, "necesidades_activas"),
       trainings: sum(rows, "capacitaciones"),
@@ -284,7 +303,7 @@ export default function EicStatusReport({
     const groups = new Map<string, Set<string>>();
     trainingGroups.forEach((row, index) => {
       const label = modalityLabel(text(row, "modalidad"));
-      const id = text(row, "identificador", text(row, "nombre_capacitacion", String(index)));
+      const id = `${text(row, "__source_category", "eic")}:${text(row, "identificador", text(row, "nombre_capacitacion", String(index)))}`;
       if (!groups.has(label)) groups.set(label, new Set());
       groups.get(label)!.add(id);
     });
@@ -314,7 +333,7 @@ export default function EicStatusReport({
       <span>RESUMEN EJECUTIVO</span>
       <h3>{scopeLabel}</h3>
       <p>Lectura consolidada del presupuesto, la inversión y el avance contable de los planes de capacitación.</p>
-      <small>Información consolidada al {dashboard.cutoffDate || dashboard.period}.</small>
+      <small>Información consolidada al {primaryDashboard?.cutoffDate || primaryDashboard?.period}.</small>
     </section>
 
     {loading ? <section className="eic-loading">Preparando el resumen administrativo…</section> : error ? <section className="eic-loading error">{error}</section> : <>

@@ -348,7 +348,10 @@ export default function Home() {
   }, [period, requestKey, selectedCategories]);
 
   const activeSurvey = dashboards.length === 1 && dashboards[0].dataKind === "satisfaction" ? dashboards[0] : null;
-  const activeEic = dashboards.length === 1 && dashboards[0].dataKind === "eic_administrative" ? dashboards[0] : null;
+  const activeEicDashboards = dashboards.length > 0 && dashboards.every((dashboard) => dashboard.dataKind === "eic_administrative")
+    ? dashboards
+    : [];
+  const activeEic = activeEicDashboards[0] ?? null;
   const tiendaChapters = useMemo(
     () => tiendaChapterKeys.map((key) => categories.find((category) => category.key === key)).filter((category): category is CategoryOption => Boolean(category)),
     [categories],
@@ -399,9 +402,14 @@ export default function Home() {
   );
   const selectedCategory = selectedReportOptions[0] ?? categories[0];
   const reportIsSurvey = selectedCategory?.key === "encuesta_de_satisfaccion";
-  const reportIsEic = selectedCategory?.key === "eic_administrativa";
+  const reportIsEic = selectedReportOptions.length > 0 && selectedReportOptions.every((category) =>
+    category.key === "eic_administrativa" || Boolean(category.collectionKey && trainingPlansCollectionKeys.has(category.collectionKey))
+  );
   const displayEic = !reportLoading && activeEic;
   const showEicReport = reportIsEic || Boolean(displayEic);
+  const eicReportTitle = selectedReportOptions.length > 1
+    ? "Planes de capacitación"
+    : selectedCategory?.label ?? "Planes de capacitación";
   const tiendaPeriodReady = openBook !== "tienda" || (yearFilterChosen && monthFilterChosen);
   const sourceMetrics = useMemo<MetricRow[]>(() => !selectedCategories.length
     ? []
@@ -772,7 +780,7 @@ export default function Home() {
               {showEicReport && <div className="eic-letterhead-top">
                 <div className="eic-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa" /></div>
               </div>}
-              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && !showEicReport && <span className="eyebrow">{peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{reportIsSurvey ? "Satisfacción" : showEicReport ? "Dirección de Administración GC" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && !showEicReport && <span className="eyebrow">{peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{reportIsSurvey ? "Satisfacción" : showEicReport ? eicReportTitle : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
             {reportLoading ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
@@ -816,7 +824,7 @@ export default function Home() {
               )}
             </div></div>}
 
-            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} details={surveyDetails} detailsError={surveyDetailsError} /> : activeEic ? <EicStatusReport key={`${activeEic.category}/${activeEic.period}`} dashboard={activeEic} /> : <><section className="report-lead">
+            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} details={surveyDetails} detailsError={surveyDetailsError} /> : activeEic ? <EicStatusReport key={`${activeEicDashboards.map((dashboard) => dashboard.category).join("+")}/${activeEic.period}`} dashboards={activeEicDashboards} /> : <><section className="report-lead">
               <h3>{selectedLabel}</h3>
               <p>{peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde RunSQL."}</p>
               <small>{usingDemo ? "Aún no hay datos sincronizados para este periodo. Publica la información desde RunSQL." : `Fecha de corte del periodo ${period}.`}</small>
