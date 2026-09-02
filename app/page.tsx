@@ -82,7 +82,6 @@ const ReportCover = memo(function ReportCover({ category, compact = false }: { c
     cajero: "/report-covers/cajero-v2.png",
     encuesta_de_satisfaccion: "/report-covers/encuesta-satisfaccion-v2.png",
     gerente: "/report-covers/gerente-v1.png",
-    staff_collection: "/report-covers/staff-moon.png",
     tienda: "/report-covers/asesor-v1.png",
   }[category.key] ?? null;
   const artwork = compact && tiendaChapterKeys.includes(category.key) ? null : coverArtwork;
