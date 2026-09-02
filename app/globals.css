@@ -1850,11 +1850,12 @@ html, body { background: #fff; }
 .sheet.tienda-themed .course-table .expandable-section > div > button {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   min-height: 88px;
   box-sizing: border-box;
-  grid-template-columns: minmax(250px, 30%) minmax(220px, 1fr) 74px;
+  grid-template-columns: minmax(0, .82fr) minmax(0, 1.4fr) 64px;
   align-items: center;
-  column-gap: 28px;
+  column-gap: clamp(14px, 2vw, 28px);
 }
 .sheet.tienda-themed .course-table .expandable-section,
 .sheet.tienda-themed .course-table .expandable-section > div {
@@ -1866,9 +1867,19 @@ html, body { background: #fff; }
 .sheet.tienda-themed .course-table button > strong {
   min-width: 0;
 }
+.sheet.tienda-themed .course-table button > span { overflow: hidden; }
+.sheet.tienda-themed .course-table button > span > em {
+  display: -webkit-box;
+  overflow: hidden;
+  font-style: normal;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 .sheet.tienda-themed .course-table button > i { width: 100%; }
 .sheet.tienda-themed .course-table button > strong {
-  width: 74px;
+  width: 64px;
   font-variant-numeric: tabular-nums;
 }
 .sheet.tienda-themed .course-table button > i {
