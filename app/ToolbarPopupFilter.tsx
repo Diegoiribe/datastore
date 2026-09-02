@@ -18,11 +18,12 @@ export function useDelayedPanelClose(onClose: () => void) {
   return { cancelClose, scheduleClose };
 }
 
-export default function ToolbarPopupFilter({ label, value, options, open, className = "", onOpenChange, onChange }: {
+export default function ToolbarPopupFilter({ label, value, options, open, disabled = false, className = "", onOpenChange, onChange }: {
   label: string;
   value?: string;
   options: ToolbarPopupOption[];
   open: boolean;
+  disabled?: boolean;
   className?: string;
   onOpenChange(open: boolean): void;
   onChange(value: string): void;
@@ -54,12 +55,12 @@ export default function ToolbarPopupFilter({ label, value, options, open, classN
     return () => panel.removeEventListener("wheel", keepWheelInsideMenu);
   }, [forceScrollable, open, visibleOptions.length]);
   return <div
-    className={`toolbar-popup-filter${open ? " open" : ""}${className ? ` ${className}` : ""}`}
+    className={`toolbar-popup-filter${open ? " open" : ""}${disabled ? " disabled" : ""}${className ? ` ${className}` : ""}`}
     onMouseEnter={cancelClose}
     onMouseLeave={scheduleClose}
     onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) onOpenChange(false); }}
   >
-    <button type="button" className="toolbar-popup-trigger" onClick={() => onOpenChange(!open)} aria-haspopup="listbox" aria-expanded={open}>
+    <button type="button" className="toolbar-popup-trigger" disabled={disabled} onClick={() => onOpenChange(!open)} aria-haspopup="listbox" aria-expanded={open}>
       <span>{selected?.label ?? label}</span><i aria-hidden="true" />
     </button>
     {open && <div className="toolbar-popup-options" role="listbox" aria-label={label}>

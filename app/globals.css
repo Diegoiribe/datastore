@@ -392,6 +392,8 @@ html, body { background: #fff; }
 }
 .toolbar-popup-trigger:hover,
 .toolbar-popup-filter.open .toolbar-popup-trigger { background: #e8e8eb; }
+.toolbar-popup-filter.disabled .toolbar-popup-trigger { background: transparent; color: #9a9aa0; cursor: default; }
+.toolbar-popup-filter.disabled .toolbar-popup-trigger > i { display: none; }
 .toolbar-popup-trigger > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toolbar-popup-trigger > i { width: 6px; height: 6px; flex: none; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .18s ease; }
 .toolbar-popup-filter.open .toolbar-popup-trigger > i { transform: translateY(2px) rotate(225deg); }
