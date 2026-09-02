@@ -28,6 +28,7 @@ const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerent
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const staffCollectionCategory: CategoryOption = { key: "staff_collection", label: "Staff" };
 const trainingPlansCollectionCategory: CategoryOption = { key: "training_plans_collection", label: "Planes de capacitación" };
+const trainingPlansCollectionKeys = new Set(["training_plans", "planes_de_capacitacion"]);
 const collectionTabColors = ["#f4cb63", "#f2a895", "#b9dcae", "#9ec9eb", "#c8b7df", "#efb8d5", "#a8d9d2"];
 const institutionalPalette = {
   accent: "#F0D224",
@@ -48,7 +49,7 @@ function reportFamily(category: CategoryOption) {
   if (category.key === "tienda") return { label: "Colección", description: "Cinco capítulos del equipo de Tienda" };
   if (category.key === "staff_collection") return { label: "Colección", description: "Reportes de capacitación del equipo Staff" };
   if (category.key === "training_plans_collection") return { label: "Colección", description: "Planes de capacitación organizados por dirección C-Level" };
-  if (category.collectionKey === "training_plans") return { label: "Planes", description: "Seguimiento presupuestal y operativo por dirección" };
+  if (category.collectionKey && trainingPlansCollectionKeys.has(category.collectionKey)) return { label: "Planes", description: "Seguimiento presupuestal y operativo por C-Level" };
   if (category.collectionKey === "staff") return { label: "Talento", description: "Seguimiento de capacitación corporativa" };
   if (category.key === "encuesta_de_satisfaccion") return { label: "Experiencia", description: "Satisfacción, recomendación y voz del participante" };
   if (category.key === "eic_administrativa") return { label: "Gestión", description: "Presupuesto y operación de la Dirección de Administración GC" };
@@ -244,13 +245,17 @@ export default function Home() {
     listCategories()
       .then((items) => {
         if (items.length) {
-          setCategories(items.map(({ key, label, collectionKey, collectionLabel, history }) => ({
-            key,
-            label: key === "eic_administrativa" ? "Dirección de Administración GC" : label,
-            collectionKey: key === "eic_administrativa" ? "training_plans" : collectionKey,
-            collectionLabel: key === "eic_administrativa" ? "Planes de capacitación" : collectionLabel,
-            history,
-          })));
+          setCategories(items.map(({ key, label, collectionKey, collectionLabel, history }) => {
+            const isLegacyAdministrationReport = key === "eic_administrativa";
+            const belongsToTrainingPlans = isLegacyAdministrationReport || Boolean(collectionKey && trainingPlansCollectionKeys.has(collectionKey));
+            return {
+              key,
+              label: isLegacyAdministrationReport ? "Dirección de Administración GC" : label,
+              collectionKey: belongsToTrainingPlans ? "planes_de_capacitacion" : collectionKey,
+              collectionLabel: belongsToTrainingPlans ? "Planes de capacitación" : collectionLabel,
+              history,
+            };
+          }));
           setSelectedCategories((current) => current.filter((key) => items.some((item) => item.key === key)));
           const latestPeriod = items.flatMap((item) => Object.keys(item.history ?? {})).sort().at(-1);
           if (latestPeriod) {
@@ -353,7 +358,7 @@ export default function Home() {
     [categories],
   );
   const trainingPlanChapters = useMemo(
-    () => categories.filter((category) => category.collectionKey === "training_plans"),
+    () => categories.filter((category) => category.collectionKey === "planes_de_capacitacion"),
     [categories],
   );
   const chapterKeys = useMemo(
