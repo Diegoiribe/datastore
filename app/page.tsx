@@ -27,7 +27,7 @@ type CategoryOption = {
 const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerente_zona"];
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const staffCollectionCategory: CategoryOption = { key: "staff_collection", label: "Staff" };
-const trainingPlansCollectionCategory: CategoryOption = { key: "training_plans_collection", label: "Planes de capacitación" };
+const trainingPlansCollectionCategory: CategoryOption = { key: "training_plans_collection", label: "Capacitación especializada" };
 const trainingPlansCollectionKeys = new Set(["training_plans", "planes_de_capacitacion"]);
 const collectionTabColors = ["#f4cb63", "#f2a895", "#b9dcae", "#9ec9eb", "#c8b7df", "#efb8d5", "#a8d9d2"];
 const institutionalPalette = {
@@ -418,7 +418,7 @@ export default function Home() {
   const displayEic = !reportLoading && activeEic;
   const showEicReport = reportIsEic || Boolean(displayEic);
   const eicReportTitle = selectedReportOptions.length > 1
-    ? "Planes de capacitación"
+    ? "Capacitación especializada"
     : selectedCategory?.label ?? "Planes de capacitación";
   const tiendaPeriodReady = openBook !== "tienda" || (yearFilterChosen && monthFilterChosen);
   const sourceMetrics = useMemo<MetricRow[]>(() => !selectedCategories.length
