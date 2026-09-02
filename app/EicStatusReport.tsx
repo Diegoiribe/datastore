@@ -226,23 +226,12 @@ export default function EicStatusReport({
     return [...groups].map(([label, value]) => ({ label, value, share: total ? value / total : 0 })).sort((a, b) => b.value - a.value);
   }, [initiatives]);
 
-  const cLevelComparison = useMemo(() => {
-    const rows = cLevel === "all" ? (views.c_level ?? []) : (views.c_level ?? []).filter((row) => text(row, "direccion_c_level") === cLevel);
-    return rows.map((row) => ({
-      label: text(row, "direccion_c_level"),
-      budget: number(row, "presupuesto_autorizado_mxn"),
-      investment: number(row, "inversion_actual_mxn"),
-      progress: number(row, "avance_presupuesto"),
-      trainings: number(row, "capacitaciones"),
-    })).sort((a, b) => b.budget - a.budget);
-  }, [cLevel, views.c_level]);
-
   const scopeLabel = cLevel !== "all" ? cLevel : "Vista general";
 
   return <div className="eic-report">
     <div className="floating-toolbar-frame eic-toolbar-frame">
-      <div className="sheet-toolbar eic-toolbar" aria-label="Filtros del estatus de planes de capacitación">
-        <PopupFilter label="C-Level" className="region-filter" value={cLevel} options={[{ value: "all", label: "Todas las direcciones C-Level" }, ...cLevels.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-c-level"} onOpenChange={(open) => setOpenFilter(open ? "eic-c-level" : null)} onChange={setCLevel} />
+      <div className="sheet-toolbar eic-toolbar" aria-label="Filtros de la Dirección de Administración GC">
+        <PopupFilter label="Área" className="region-filter" value={cLevel} options={[{ value: "all", label: "Todas las áreas" }, ...cLevels.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-area"} onOpenChange={(open) => setOpenFilter(open ? "eic-area" : null)} onChange={setCLevel} />
       </div>
     </div>
 
@@ -272,18 +261,6 @@ export default function EicStatusReport({
           <div className="eic-ring" style={{ "--ring-progress": `${Math.min(totals.accountingProgress * 360, 360)}deg` } as CSSProperties}><strong>{percentage(totals.accountingProgress)}</strong></div>
           <small>{money(totals.charged)} cargados al centro</small>
         </article>
-      </section>
-
-      <section className="eic-section">
-        <header className="eic-section-heading"><div><span>Panorama por C-Level</span><small>Presupuesto, inversión y número de capacitaciones</small></div><b>{cLevelComparison.length} {cLevelComparison.length === 1 ? "dirección" : "direcciones"}</b></header>
-        <div className="eic-c-level-list">
-          {cLevelComparison.length ? cLevelComparison.map((item) => <button type="button" key={item.label} onClick={() => setCLevel(item.label)}>
-            <span><strong>{item.label}</strong><small>{item.trainings.toLocaleString("es-MX")} capacitaciones</small></span>
-            <i><b style={{ width: `${Math.min(item.progress * 100, 100)}%` }} /></i>
-            <span className="eic-c-level-money"><strong>{money(item.investment)}</strong><small>de {money(item.budget)}</small></span>
-            <em>{percentage(item.progress)}</em>
-          </button>) : <p className="eic-empty">No hay información C-Level para esta selección.</p>}
-        </div>
       </section>
 
       <section className="eic-authorized-plan">
@@ -341,11 +318,11 @@ export default function EicStatusReport({
       </section>
 
       <section className="eic-section">
-        <header className="eic-section-heading"><div><span>Detalle por dirección C-Level</span><small>Lectura financiera y operativa de las siete direcciones</small></div><b>{filteredDirections.filter((row) => text(row, "direccion_c_level") !== "Sin dirección").length}</b></header>
+        <header className="eic-section-heading"><div><span>Detalle por área</span><small>Lectura financiera y operativa de las direcciones y divisiones</small></div><b>{filteredDirections.filter((row) => text(row, "direccion_c_level") !== "Sin dirección").length} áreas</b></header>
         <div className="eic-direction-table">
           <div className="eic-direction-head"><span>Dirección</span><span>Capacitaciones</span><span>Presupuesto</span><span>Inversión</span><span>Avance</span></div>
           {filteredDirections.filter((row) => text(row, "direccion_c_level") !== "Sin dirección").map((row) => <button type="button" key={text(row, "direccion_c_level")} onClick={() => setCLevel(text(row, "direccion_c_level"))}>
-            <span><strong>{text(row, "direccion_c_level")}</strong><small>Dirección C-Level</small></span>
+            <span><strong>{text(row, "direccion_c_level")}</strong><small>Área de la Dirección de Administración</small></span>
             <span>{number(row, "capacitaciones").toLocaleString("es-MX")}</span>
             <span>{compactNumber(number(row, "presupuesto_autorizado_mxn"))}</span>
             <span>{compactNumber(number(row, "inversion_actual_mxn"))}</span>

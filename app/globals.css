@@ -937,6 +937,11 @@ html, body { background: #fff; }
 .survey-letterhead-top { display: flex; align-items: flex-start; margin: -36px -24px 30px; }
 .survey-letterhead-logo { width: 88px; height: 56px; overflow: hidden; background: transparent; }
 .survey-letterhead-logo img { width: 166px; max-width: none; height: 56px; display: block; object-fit: contain; object-position: left top; }
+.sheet-title.eic-letterhead { display: block; }
+.eic-letterhead-top { display: flex; align-items: flex-start; margin: -36px -24px 30px; }
+.eic-letterhead-logo { width: 88px; height: 56px; overflow: hidden; background: transparent; }
+.eic-letterhead-logo img { width: 166px; max-width: none; height: 56px; display: block; object-fit: contain; object-position: left top; }
+.eic-letterhead .sheet-title-copy h2 { color: #1d1d1f; font-size: clamp(20px, 4.9cqi, 40px); }
 .sheet.survey-themed .sheet-title-copy .eyebrow { color: var(--survey-action); transition: color .24s ease; }
 .sheet.survey-themed .sheet-title-copy h2,
 .sheet.survey-themed .survey-lead h3,
@@ -990,6 +995,9 @@ html, body { background: #fff; }
   .survey-letterhead-top { margin: -20px -14px 25px; }
   .survey-letterhead-logo { width: 76px; height: 48px; }
   .survey-letterhead-logo img { width: 142px; height: 48px; }
+  .eic-letterhead-top { margin: -20px -14px 25px; }
+  .eic-letterhead-logo { width: 76px; height: 48px; }
+  .eic-letterhead-logo img { width: 142px; height: 48px; }
   .survey-filter { min-width: 118px; flex: 0 0 118px; }
   .quality-note { grid-template-columns: 1fr; gap: 6px; }
   .comment-list { grid-template-columns: 1fr; }

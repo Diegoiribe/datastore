@@ -379,6 +379,7 @@ export default function Home() {
   );
   const selectedCategory = selectedReportOptions[0] ?? categories[0];
   const reportIsSurvey = selectedCategory?.key === "encuesta_de_satisfaccion";
+  const reportIsEic = selectedCategory?.key === "eic_administrativa";
   const displayEic = !reportLoading && activeEic;
   const tiendaPeriodReady = openBook !== "tienda" || (yearFilterChosen && monthFilterChosen);
   const sourceMetrics = useMemo<MetricRow[]>(() => !selectedCategories.length
@@ -664,7 +665,7 @@ export default function Home() {
           Todos los reportes
         </button>
         <h1>Reportes</h1>
-        <p>{displayEic ? "Consulta presupuesto, inversión, cotizaciones, capacitaciones y pagos por dirección C-Level." : reportIsSurvey ? "Explora satisfacción, recomendación y desempeño por programa e instructor." : "Consulta el avance mensual, compara regiones y encuentra cursos pendientes."}</p>
+        <p>{reportIsEic ? "Consulta presupuesto, inversión, cotizaciones, capacitaciones y pagos de las áreas de la Dirección de Administración." : reportIsSurvey ? "Explora satisfacción, recomendación y desempeño por programa e instructor." : "Consulta el avance mensual, compara regiones y encuentra cursos pendientes."}</p>
       </section>
 
     <main className={readerMode ? "workspace-shell reader-mode" : "workspace-shell"}>
@@ -738,15 +739,18 @@ export default function Home() {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={`${reportLoading ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${reportIsSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : reportIsSurvey ? { "--survey-accent": satisfactionPalette.accent, "--survey-secondary": satisfactionPalette.secondary, "--survey-deep": satisfactionPalette.deep, "--survey-action": satisfactionPalette.accent } as CSSProperties : undefined}>
-            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : reportIsSurvey ? "sheet-title tienda-letterhead survey-letterhead" : "sheet-title"}>
+          <article className={`${reportLoading ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${reportIsSurvey ? " survey-themed" : ""}${reportIsEic ? " eic-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : reportIsSurvey ? { "--survey-accent": satisfactionPalette.accent, "--survey-secondary": satisfactionPalette.secondary, "--survey-deep": satisfactionPalette.deep, "--survey-action": satisfactionPalette.accent } as CSSProperties : undefined}>
+            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : reportIsSurvey ? "sheet-title tienda-letterhead survey-letterhead" : reportIsEic ? "sheet-title tienda-letterhead eic-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
               </div>}
               {reportIsSurvey && <div className="survey-letterhead-top">
                 <div className="survey-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa" /></div>
               </div>}
-              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && <span className="eyebrow">{displayEic ? "PLANES DE CAPACITACIÓN" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{reportIsSurvey ? "Satisfacción" : displayEic ? "Dirección de Administración GC" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              {reportIsEic && <div className="eic-letterhead-top">
+                <div className="eic-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa" /></div>
+              </div>}
+              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && !reportIsEic && <span className="eyebrow">{peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{reportIsSurvey ? "Satisfacción" : reportIsEic ? "Dirección de Administración GC" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
             {reportLoading ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
