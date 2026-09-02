@@ -118,6 +118,15 @@ function AccentPicker({ value, open, onOpenChange, onChange, label }: {
   </div>;
 }
 
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 function LibraryFooter() {
   return <footer className="library-footer">
     <div className="footer-signature">
@@ -551,6 +560,60 @@ export default function Home() {
     ? `Corte ${activeEic.cutoffDate || activeEic.period}`
     : tiendaPeriodReady ? period : "Selecciona periodo";
 
+  const downloadReportHtml = async () => {
+    const sourceSheet = reportSheetRef.current;
+    if (!sourceSheet) return;
+
+    const exportSheet = sourceSheet.cloneNode(true) as HTMLElement;
+    exportSheet.classList.remove("is-loading");
+    exportSheet.classList.add("is-ready");
+    exportSheet.querySelectorAll(".expandable-section").forEach((section) => section.classList.add("is-open"));
+    exportSheet.querySelectorAll(".show-more-button, .tienda-accent-picker").forEach((element) => element.remove());
+
+    await Promise.all(Array.from(exportSheet.querySelectorAll("img")).map(async (image) => {
+      try {
+        const response = await fetch(new URL(image.getAttribute("src") || "", window.location.href));
+        if (response.ok) image.src = await blobToDataUrl(await response.blob());
+      } catch {
+        image.src = new URL(image.getAttribute("src") || "", window.location.href).href;
+      }
+    }));
+
+    const styles = Array.from(document.styleSheets).map((sheet) => {
+      try {
+        return Array.from(sheet.cssRules).map((rule) => rule.cssText).join("\n");
+      } catch {
+        return "";
+      }
+    }).join("\n");
+    const safeTitle = selectedLabel.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] || character);
+    const exportCss = `
+      * { box-sizing: border-box; }
+      html, body { min-height: 100%; margin: 0; background: #f3f3f5; }
+      body { padding: 32px; }
+      .sheet { width: min(1160px, 100%); min-height: 0; margin: 0 auto; overflow: visible; }
+      .expandable-section { grid-template-rows: 1fr !important; opacity: 1 !important; }
+      .sheet, .report-content, .report-lead, .survey-lead, .metric-grid, .survey-kpis, .dashboard-grid, .survey-grid { animation: none !important; }
+      .export-actions { position: sticky; z-index: 50; top: 18px; width: max-content; margin: 0 0 18px auto; }
+      .export-actions button { padding: 11px 17px; border: 0; border-radius: 999px; background: #1d1d1f; color: #fff; font: 650 13px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+      @media print {
+        @page { size: A4; margin: 10mm; }
+        html, body { background: #fff !important; }
+        body { padding: 0 !important; }
+        .export-actions, .sheet-toolbar, .survey-toolbar { display: none !important; }
+        .sheet { width: 100% !important; margin: 0 !important; padding: 12mm 10mm !important; border: 0 !important; box-shadow: none !important; }
+        .panel, .metric-grid, .survey-kpis, .course-table button, .people-summary, .person-row { break-inside: avoid; }
+      }
+    `;
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${styles}\n${exportCss}</style></head><body><div class="export-actions"><button type="button" onclick="window.print()">Guardar como PDF</button></div>${exportSheet.outerHTML}</body></html>`;
+    const url = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${textKey(selectedLabel).replace(/\s+/g, "-") || "reporte"}-${period}.html`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   if (!selectedCategories.length && !openBook) {
     return <div className="site-page library-page">
       <header className="site-header library-header">
@@ -660,9 +723,9 @@ export default function Home() {
             <button
               type="button"
               className="download-report-button"
-              onClick={() => window.print()}
-              aria-label="Descargar reporte en PDF"
-              title="Descargar reporte en PDF"
+              onClick={() => void downloadReportHtml()}
+              aria-label="Descargar reporte en HTML"
+              title="Descargar reporte en HTML"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 19h14" /></svg>
             </button>
@@ -675,7 +738,7 @@ export default function Home() {
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
               </div>}
-              <div className="sheet-title-copy">{(openBook !== "tienda" || peopleMode) && <span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              <div className="sheet-title-copy">{openBook !== "tienda" && <span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
               {activeSurvey && <AccentPicker value={surveyAccent} open={surveyAccentPickerOpen} onOpenChange={setSurveyAccentPickerOpen} onChange={setSurveyAccent} label="Mostrar paletas de la encuesta" />}
             </header>
 

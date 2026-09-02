@@ -328,7 +328,7 @@ html, body { background: #fff; }
 .accent-toggle { position: absolute; top: 1px; right: 1px; z-index: 2; border-color: #fff; opacity: 1; box-shadow: none; transition: opacity .15s ease, transform .24s ease; }
 .tienda-accent-picker.is-open .accent-toggle { opacity: 0; transform: scale(.78); pointer-events: none; }
 .tienda-letterhead .sheet-title-copy { position: relative; min-width: 0; margin: 0; padding: 0; container-type: inline-size; }
-.tienda-letterhead .sheet-title-copy::before { position: absolute; top: -6px; bottom: -6px; left: -24px; width: 4px; background: var(--tienda-accent, #f8d31c); content: ""; transition: background .24s ease; }
+.tienda-letterhead .sheet-title-copy::before { position: absolute; top: 50%; left: -24px; width: 4px; height: 80px; background: var(--tienda-accent, #f8d31c); content: ""; transform: translateY(-50%); transition: background .24s ease; }
 .tienda-letterhead .sheet-title-copy h2 { max-width: none; font-size: clamp(22px, 6.15cqi, 42px); letter-spacing: -.055em; white-space: nowrap; }
 .sheet.tienda-themed .metric-grid strong, .sheet.tienda-themed .panel-heading b { color: var(--tienda-deep, #081754); }
 .sheet.tienda-themed .bar-column div { background: var(--tienda-accent, #F0D224); }
@@ -620,7 +620,7 @@ html, body { background: #fff; }
   .tienda-accent-picker.is-open .accent-options > div { top: 5px; right: 5px; gap: 5px; }
   .accent-swatch { width: 24px; height: 24px; flex-basis: 24px; }
   .accent-toggle { top: 1px; right: 1px; }
-  .tienda-letterhead .sheet-title-copy::before { left: -14px; width: 3px; }
+  .tienda-letterhead .sheet-title-copy::before { left: -14px; width: 3px; height: 64px; }
   .tienda-letterhead .sheet-title-copy h2 { font-size: clamp(20px, 6.15cqi, 32px); }
   .metric-grid { grid-template-columns: 1fr; }
   .metric-grid article { border-right: 0; border-bottom: 1px solid #e0e0e4; }
