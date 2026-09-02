@@ -107,8 +107,21 @@ export default function EicStatusReport({
       back: node.scrollLeft > 2,
       forward: node.scrollLeft + node.clientWidth < node.scrollWidth - 2,
     });
-    sync();
-    const observer = new ResizeObserver(sync);
+    const fitWholeCards = () => {
+      if (!node.clientWidth) return;
+      const totalCards = 9;
+      const targetWidth = 94;
+      const allCardsFit = node.clientWidth >= totalCards * targetWidth;
+      const visibleCards = allCardsFit ? totalCards : Math.max(2, Math.floor(node.clientWidth / targetWidth));
+      const cardWidth = allCardsFit ? targetWidth : node.clientWidth / visibleCards;
+      const previousWidth = node.querySelector<HTMLElement>("article")?.offsetWidth || targetWidth;
+      const currentCard = Math.round(node.scrollLeft / previousWidth);
+      node.style.setProperty("--authorized-card-width", `${cardWidth}px`);
+      node.scrollLeft = currentCard * cardWidth;
+      sync();
+    };
+    fitWholeCards();
+    const observer = new ResizeObserver(fitWholeCards);
     observer.observe(node);
     return () => observer.disconnect();
   }, [cLevel, loading, views]);
