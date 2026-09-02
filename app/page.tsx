@@ -705,14 +705,14 @@ export default function Home() {
 
         <div className="report-scroll" ref={reportScrollRef}>
           <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : activeSurvey ? { "--survey-accent": institutionalPalette.accent, "--survey-secondary": institutionalPalette.secondary, "--survey-deep": institutionalPalette.deep, "--survey-action": institutionalPalette.accent } as CSSProperties : undefined}>
-            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : activeSurvey ? "sheet-title survey-letterhead" : "sheet-title"}>
+            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : activeSurvey ? "sheet-title tienda-letterhead survey-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
               </div>}
               {activeSurvey && <div className="survey-letterhead-top">
-                <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
+                <div className="survey-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa" /></div>
               </div>}
-              <div className="sheet-title-copy">{openBook !== "tienda" && <span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && <span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
             {loading && tiendaPeriodReady ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">

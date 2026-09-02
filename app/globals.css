@@ -878,6 +878,8 @@ html, body { background: #fff; }
 .sheet.survey-themed { --survey-accent: #1d1d1f; --survey-secondary: #8e8e93; --survey-deep: #000; --survey-action: #3a3a3c; }
 .sheet-title.survey-letterhead { display: block; }
 .survey-letterhead-top { display: flex; align-items: flex-start; margin: -36px -24px 30px; }
+.survey-letterhead-logo { width: 88px; height: 56px; overflow: hidden; background: transparent; }
+.survey-letterhead-logo img { width: 166px; max-width: none; height: 56px; display: block; object-fit: contain; object-position: left top; }
 .sheet.survey-themed .sheet-title-copy .eyebrow { color: var(--survey-action); transition: color .24s ease; }
 .sheet.survey-themed .sheet-title-copy h2,
 .sheet.survey-themed .survey-lead h3,
@@ -918,6 +920,8 @@ html, body { background: #fff; }
 }
 @media (max-width: 640px) {
   .survey-letterhead-top { margin: -20px -14px 25px; }
+  .survey-letterhead-logo { width: 76px; height: 48px; }
+  .survey-letterhead-logo img { width: 142px; height: 48px; }
   .survey-filter { min-width: 118px; flex: 0 0 118px; }
   .quality-note { grid-template-columns: 1fr; gap: 6px; }
   .comment-list { grid-template-columns: 1fr; }
