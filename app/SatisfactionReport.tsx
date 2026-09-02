@@ -110,11 +110,10 @@ function OpportunityPlan({ items }: { items: SatisfactionComment[] }) {
   }, new Map<string, { theme: string; count: number; proposal: string; example: string }>()).values()]
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
-  if (!actions.length) return null;
   const opportunityCount = actions.reduce((total, item) => total + item.count, 0);
   return <section className="opportunity-plan">
-    <div className="opportunity-plan-heading"><div><span>Propuestas de mejora</span><small>Acciones sugeridas a partir de las oportunidades repetidas</small></div><b>{opportunityCount.toLocaleString("es-MX")} menciones</b></div>
-    <div className="opportunity-actions">{actions.map((item) => <article key={item.theme}><div><span>{item.theme}</span><b>{item.count.toLocaleString("es-MX")}</b></div><p>{item.proposal}</p>{item.example && <small>Señal detectada: “{item.example}”</small>}</article>)}</div>
+    <div className="opportunity-plan-heading"><div><span>Oportunidades</span><small>Hallazgos repetidos y acciones sugeridas para la siguiente sesión</small></div><b>{opportunityCount.toLocaleString("es-MX")} menciones</b></div>
+    {actions.length ? <div className="opportunity-actions">{actions.map((item) => <article key={item.theme}><div><span>{item.theme}</span><b>{item.count.toLocaleString("es-MX")}</b></div><p>{item.proposal}</p>{item.example && <small>Señal detectada: “{item.example}”</small>}</article>)}</div> : <p className="opportunity-empty">No se detectaron comentarios clasificados como oportunidad en esta selección.</p>}
   </section>;
 }
 
