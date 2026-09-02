@@ -27,7 +27,7 @@ const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const staffCollectionCategory: CategoryOption = { key: "staff_collection", label: "Staff" };
 const collectionTabColors = ["#f4cb63", "#f2a895", "#b9dcae", "#9ec9eb", "#c8b7df", "#efb8d5", "#a8d9d2"];
 const tiendaAccentOptions = [
-  { key: "institutional", label: "Amarillo institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#C9A900", swatch: "linear-gradient(90deg, #F0D224 0 56%, #1C42E8 56% 78%, #081754 78% 100%)" },
+  { key: "institutional", label: "Amarillo institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#F0D224", swatch: "linear-gradient(90deg, #F0D224 0 56%, #1C42E8 56% 78%, #081754 78% 100%)" },
   { key: "yellow_sky", label: "Amarillo cielo", accent: "#F4CF24", secondary: "#1CA8F7", deep: "#082750", action: "#C9A400", swatch: "linear-gradient(90deg, #F4CF24 0 58%, #1CA8F7 58% 82%, #082750 82% 100%)" },
   { key: "monochrome", label: "Monocromática", accent: "#1D1D1F", secondary: "#8E8E93", deep: "#000000", action: "#3A3A3C", swatch: "linear-gradient(90deg, #111113 0 38%, #8E8E93 38% 68%, #F4F4F6 68% 100%)" },
   { key: "yellow_coral", label: "Amarillo coral", accent: "#F2CC22", secondary: "#EF8B72", deep: "#4B2430", action: "#C7A200", swatch: "linear-gradient(90deg, #F2CC22 0 58%, #EF8B72 58% 82%, #4B2430 82% 100%)" },
@@ -231,8 +231,6 @@ export default function Home() {
   const [pendingError, setPendingError] = useState("");
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [showAllCourses, setShowAllCourses] = useState(false);
-  const [tiendaAccent, setTiendaAccent] = useState(tiendaAccentOptions[0]);
-  const [accentPickerOpen, setAccentPickerOpen] = useState(false);
   const [surveyAccent, setSurveyAccent] = useState(tiendaAccentOptions[2]);
   const [surveyAccentPickerOpen, setSurveyAccentPickerOpen] = useState(false);
   const [readerMode, setReaderMode] = useState(false);
@@ -672,11 +670,10 @@ export default function Home() {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccent.accent, "--tienda-secondary": tiendaAccent.secondary, "--tienda-deep": tiendaAccent.deep, "--tienda-action": tiendaAccent.action } as CSSProperties : activeSurvey ? { "--survey-accent": surveyAccent.accent, "--survey-secondary": surveyAccent.secondary, "--survey-deep": surveyAccent.deep, "--survey-action": surveyAccent.action } as CSSProperties : undefined}>
+          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccentOptions[0].accent, "--tienda-secondary": tiendaAccentOptions[0].secondary, "--tienda-deep": tiendaAccentOptions[0].deep, "--tienda-action": tiendaAccentOptions[0].accent } as CSSProperties : activeSurvey ? { "--survey-accent": surveyAccent.accent, "--survey-secondary": surveyAccent.secondary, "--survey-deep": surveyAccent.deep, "--survey-action": surveyAccent.action } as CSSProperties : undefined}>
             <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : activeSurvey ? "sheet-title survey-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
-                <AccentPicker value={tiendaAccent} open={accentPickerOpen} onOpenChange={setAccentPickerOpen} onChange={setTiendaAccent} label="Mostrar paletas del membrete" />
               </div>}
               <div className="sheet-title-copy"><span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : openBook === "tienda" ? "ACADEMIA DE VENTAS" : "DOCUMENTO DE RESULTADOS"}</span><h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
               {activeSurvey && <AccentPicker value={surveyAccent} open={surveyAccentPickerOpen} onOpenChange={setSurveyAccentPickerOpen} onChange={setSurveyAccent} label="Mostrar paletas de la encuesta" />}
@@ -749,8 +746,8 @@ export default function Home() {
                     {regionalRanking.length > 5 && <button className="show-more-button" onClick={() => setShowAllRegions((current) => !current)}><span>{showAllRegions ? "Mostrar menos" : `Ver ${regionalRanking.length - 5} más`}</span><span className="more-icon-shell more-glyph" aria-hidden="true">{showAllRegions ? "−" : "+"}</span></button>}
                   </article>
                   <article className="panel course-panel">
-                    <div className="panel-heading"><div><span>Avance por curso</span><small>Selecciona un curso para filtrar</small></div></div>
-                    {courseProgress.length ? <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button key={item.label} onClick={() => { setCourseFilterChosen(true); setCourse(item.label); }}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}<div className={showAllCourses ? "expandable-section is-open" : "expandable-section"}><div>{courseProgress.slice(7).map((item) => <button key={item.label} onClick={() => { setCourseFilterChosen(true); setCourse(item.label); }}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div></div></div> : <p className="comments-empty">Sin datos para los filtros seleccionados.</p>}
+                    <div className="panel-heading"><div><span>Avance por curso</span><small>Progreso consolidado de los cursos visibles</small></div></div>
+                    {courseProgress.length ? <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button type="button" disabled key={item.label}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}<div className={showAllCourses ? "expandable-section is-open" : "expandable-section"}><div>{courseProgress.slice(7).map((item) => <button type="button" disabled key={item.label}><span>{item.label}<small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div></div></div> : <p className="comments-empty">Sin datos para los filtros seleccionados.</p>}
                     {courseProgress.length > 7 && <button className="show-more-button" onClick={() => setShowAllCourses((current) => !current)}><span>{showAllCourses ? "Mostrar menos" : `Ver ${courseProgress.length - 7} más`}</span><span className="more-icon-shell more-glyph" aria-hidden="true">{showAllCourses ? "−" : "+"}</span></button>}
                   </article>
                 </section>
