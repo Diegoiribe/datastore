@@ -6,8 +6,10 @@ import {
   MetricRow,
   PendingRow,
   PeriodSummary,
+  SatisfactionComment,
   listCategories,
   loadCategoryDashboard,
+  loadDashboardDetails,
   loadPendingSection,
 } from "../lib/dashboard-data";
 import SatisfactionReport from "./SatisfactionReport";
@@ -199,6 +201,9 @@ export default function Home() {
   const [expandedBook, setExpandedBook] = useState<string | null>(null);
   const [reportQuery, setReportQuery] = useState("");
   const [dashboards, setDashboards] = useState<CategoryDashboard[]>([]);
+  const [surveyDetails, setSurveyDetails] = useState<SatisfactionComment[]>([]);
+  const [surveyDetailsError, setSurveyDetailsError] = useState("");
+  const [loadedRequestKey, setLoadedRequestKey] = useState("");
   const [year, setYear] = useState("2026");
   const [month, setMonth] = useState("7");
   const [region, setRegion] = useState("all");
@@ -227,6 +232,8 @@ export default function Home() {
   const reportSheetRef = useRef<HTMLElement>(null);
   const pendingReportScrollRef = useRef<number | null>(null);
   const period = `${year}-${month.padStart(2, "0")}`;
+  const requestKey = `${selectedCategories.join("|")}@${period}`;
+  const reportLoading = selectedCategories.length > 0 && (loading || loadedRequestKey !== requestKey);
 
   useEffect(() => {
     listCategories()
@@ -274,7 +281,7 @@ export default function Home() {
   }, [selectedCategories]);
 
   useEffect(() => {
-    if (loading || pendingReportScrollRef.current === null) return;
+    if (reportLoading || pendingReportScrollRef.current === null) return;
     const scroller = reportScrollRef.current;
     if (!scroller) return;
     const target = pendingReportScrollRef.current;
@@ -282,7 +289,7 @@ export default function Home() {
       scroller.scrollTop = Math.min(target, Math.max(0, scroller.scrollHeight - scroller.clientHeight));
       pendingReportScrollRef.current = null;
     });
-  }, [loading, selectedCategories]);
+  }, [reportLoading, selectedCategories]);
 
   useEffect(() => {
     let active = true;
@@ -293,20 +300,36 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all(selectedCategories.map((category) => loadCategoryDashboard(category, period)))
-      .then((loaded) => {
+      .then(async (loaded) => {
+        const survey = loaded.length === 1 && loaded[0].dataKind === "satisfaction" ? loaded[0] : null;
+        let details: SatisfactionComment[] = [];
+        let detailsError = "";
+        if (survey) {
+          try {
+            details = await loadDashboardDetails(survey);
+          } catch (error) {
+            detailsError = error instanceof Error ? error.message : "No se pudieron cargar los comentarios.";
+          }
+        }
         if (!active) return;
+        setSurveyDetails(details);
+        setSurveyDetailsError(detailsError);
         setDashboards(loaded);
+        setLoadedRequestKey(requestKey);
         setUsingDemo(false);
         setLastSyncAt(new Date());
       })
       .catch(() => {
         if (!active) return;
+        setSurveyDetails([]);
+        setSurveyDetailsError("");
         setDashboards([]);
+        setLoadedRequestKey(requestKey);
         setUsingDemo(true);
       })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [period, selectedCategories]);
+  }, [period, requestKey, selectedCategories]);
 
   const activeSurvey = dashboards.length === 1 && dashboards[0].dataKind === "satisfaction" ? dashboards[0] : null;
   const activeEic = dashboards.length === 1 && dashboards[0].dataKind === "eic_administrative" ? dashboards[0] : null;
@@ -354,6 +377,7 @@ export default function Home() {
   );
   const selectedCategory = selectedReportOptions[0] ?? categories[0];
   const reportIsSurvey = selectedCategory?.key === "encuesta_de_satisfaccion";
+  const displayEic = !reportLoading && activeEic;
   const tiendaPeriodReady = openBook !== "tienda" || (yearFilterChosen && monthFilterChosen);
   const sourceMetrics = useMemo<MetricRow[]>(() => !selectedCategories.length
     ? []
@@ -458,6 +482,9 @@ export default function Home() {
     resetCategoryFilters();
     setReportQuery("");
     setDashboards([]);
+    setSurveyDetails([]);
+    setSurveyDetailsError("");
+    setLoadedRequestKey("");
     setUsingDemo(true);
     setLoading(false);
     setSelectedCategories([]);
@@ -526,14 +553,14 @@ export default function Home() {
   const selectedLabel = selectedReportOptions.length > 2
     ? `${selectedReportOptions.length} reportes de ${reportFamily(selectedReportOptions[0]).label}`
     : selectedReportOptions.map((item) => item.label).join(" + ") || "Selecciona un reporte";
-  const syncLabel = loading ? "Sincronizando…" : usingDemo ? "Sin datos" : "Sincronizado";
-  const syncTitle = loading
+  const syncLabel = reportLoading ? "Sincronizando…" : usingDemo ? "Sin datos" : "Sincronizado";
+  const syncTitle = reportLoading
     ? "Consultando Firebase"
     : usingDemo
       ? "No se encontraron datos publicados para los filtros seleccionados"
       : `Última sincronización: ${lastSyncAt?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) ?? "ahora"}`;
-  const reportPeriodLabel = activeEic
-    ? `Corte ${activeEic.cutoffDate || activeEic.period}`
+  const reportPeriodLabel = displayEic
+    ? `Corte ${displayEic.cutoffDate || displayEic.period}`
     : tiendaPeriodReady ? period : "Selecciona periodo";
 
   const downloadReportHtml = async () => {
@@ -624,7 +651,7 @@ export default function Home() {
       <header className="site-header">
         <UniversityBrand onClick={returnToLibrary} />
         <strong className="header-section-title">{selectedLabel}</strong>
-        <span className={`sync-status ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>
+        <span className={`sync-status ${reportLoading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>
           <i /> {syncLabel}
         </span>
       </header>
@@ -635,7 +662,7 @@ export default function Home() {
           Todos los reportes
         </button>
         <h1>Reportes</h1>
-        <p>{activeEic ? "Consulta presupuesto, inversión, cotizaciones, capacitaciones y pagos por dirección C-Level." : reportIsSurvey ? "Explora satisfacción, recomendación y desempeño por programa e instructor." : "Consulta el avance mensual, compara regiones y encuentra cursos pendientes."}</p>
+        <p>{displayEic ? "Consulta presupuesto, inversión, cotizaciones, capacitaciones y pagos por dirección C-Level." : reportIsSurvey ? "Explora satisfacción, recomendación y desempeño por programa e instructor." : "Consulta el avance mensual, compara regiones y encuentra cursos pendientes."}</p>
       </section>
 
     <main className={readerMode ? "workspace-shell reader-mode" : "workspace-shell"}>
@@ -644,7 +671,7 @@ export default function Home() {
           <div><span className="eyebrow">CATÁLOGO</span><h1>Reportes</h1></div>
           <div className="rail-heading-actions">
             <button type="button" className="reader-mode-toggle" onClick={() => setReaderMode(true)} aria-label="Ocultar navegación y ampliar reporte" title="Ampliar reporte"><span className="pane-icon" aria-hidden="true" /></button>
-            <span className={`data-dot ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle} />
+            <span className={`data-dot ${reportLoading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle} />
           </div>
         </header>
 
@@ -695,7 +722,7 @@ export default function Home() {
           <div className="report-name"><ReportCover category={selectedCategory} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {reportPeriodLabel}</small></span></div>
           <div className="topbar-actions">
             <button type="button" className="reader-mode-toggle reader-mode-restore" onClick={() => setReaderMode(false)} aria-label="Mostrar navegación y restaurar tamaño" title="Mostrar navegación"><span className="pane-icon" aria-hidden="true" /></button>
-            <span className={`status-pill ${loading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>{syncLabel}</span>
+            <span className={`status-pill ${reportLoading ? "loading" : usingDemo ? "empty" : "synced"}`} title={syncTitle}>{syncLabel}</span>
             <button
               type="button"
               className="download-report-button"
@@ -709,18 +736,18 @@ export default function Home() {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : activeSurvey ? { "--survey-accent": satisfactionPalette.accent, "--survey-secondary": satisfactionPalette.secondary, "--survey-deep": satisfactionPalette.deep, "--survey-action": satisfactionPalette.accent } as CSSProperties : undefined}>
-            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : activeSurvey ? "sheet-title tienda-letterhead survey-letterhead" : "sheet-title"}>
+          <article className={`${reportLoading ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${reportIsSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : reportIsSurvey ? { "--survey-accent": satisfactionPalette.accent, "--survey-secondary": satisfactionPalette.secondary, "--survey-deep": satisfactionPalette.deep, "--survey-action": satisfactionPalette.accent } as CSSProperties : undefined}>
+            <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : reportIsSurvey ? "sheet-title tienda-letterhead survey-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
               </div>}
-              {activeSurvey && <div className="survey-letterhead-top">
+              {reportIsSurvey && <div className="survey-letterhead-top">
                 <div className="survey-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa" /></div>
               </div>}
-              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && <span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
+              <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && <span className="eyebrow">{displayEic ? "GESTIÓN DE CAPACITACIÓN" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{reportIsSurvey ? "Satisfacción" : displayEic ? "Estatus de planes de capacitación" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
-            {loading && tiendaPeriodReady ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
+            {reportLoading ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
             {!activeSurvey && !activeEic && <div className="floating-toolbar-frame"><div className={peopleMode ? "sheet-toolbar people" : "sheet-toolbar"} aria-label="Filtros del reporte">
               {peopleMode ? (
                 <>
@@ -761,7 +788,7 @@ export default function Home() {
               )}
             </div></div>}
 
-            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} /> : activeEic ? <EicStatusReport key={`${activeEic.category}/${activeEic.period}`} dashboard={activeEic} /> : <><section className="report-lead">
+            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} details={surveyDetails} detailsError={surveyDetailsError} /> : activeEic ? <EicStatusReport key={`${activeEic.category}/${activeEic.period}`} dashboard={activeEic} /> : <><section className="report-lead">
               <h3>{selectedLabel}</h3>
               <p>{peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde RunSQL."}</p>
               <small>{usingDemo ? "Aún no hay datos sincronizados para este periodo. Publica la información desde RunSQL." : `Fecha de corte del periodo ${period}.`}</small>

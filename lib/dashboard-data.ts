@@ -50,6 +50,7 @@ export type SatisfactionComment = {
   count: number;
   comentario: string | null;
   example: string;
+  proposal?: string | null;
 };
 
 export type PendingRow = {

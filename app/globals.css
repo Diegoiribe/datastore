@@ -885,6 +885,7 @@ html, body { background: #fff; }
 .sheet.survey-themed .survey-lead h3,
 .sheet.survey-themed .survey-kpis strong,
 .sheet.survey-themed .panel-heading b { color: var(--survey-deep); transition: color .24s ease; }
+.sheet.survey-themed .survey-letterhead .sheet-title-copy h2 { color: #1d1d1f; }
 .sheet.survey-themed .survey-kpis { border-color: color-mix(in srgb, var(--survey-secondary) 35%, #dedee3); }
 .sheet.survey-themed .survey-kpis article:nth-child(odd) { background: color-mix(in srgb, var(--survey-secondary) 4%, white); }
 .sheet.survey-themed .quality-note,
@@ -1171,6 +1172,20 @@ html, body { background: #fff; }
 .topic-row .steady { color: #85858b; }
 .topic-example, .topic-empty { margin: 0; padding: 15px 18px; border-top: 1px solid #e5e5e8; color: #77777d; font-size: 9px; line-height: 1.55; }
 .topic-example strong { color: #4b4b50; text-align: left !important; }
+.opportunity-plan { min-width: 0; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e2e2e6; }
+.opportunity-plan-heading { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.opportunity-plan-heading span, .opportunity-plan-heading small { display: block; }
+.opportunity-plan-heading span { color: #1d1d1f; font-size: 11px; font-weight: 740; }
+.opportunity-plan-heading small { margin-top: 4px; color: #85858b; font-size: 8px; line-height: 1.45; }
+.opportunity-plan-heading > b { color: #5275a3; font-size: 8px; white-space: nowrap; }
+.opportunity-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.opportunity-actions article { min-width: 0; padding: 13px; border: 1px solid #cfe1f6; border-radius: 11px; background: #f4f8fd; }
+.opportunity-actions article > div { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+.opportunity-actions article span { min-width: 0; color: #304f72; font-size: 9px; font-weight: 740; overflow-wrap: anywhere; }
+.opportunity-actions article b { flex: none; min-width: 20px; padding: 2px 5px; border-radius: 999px; background: #dbeafe; color: #41678f; font-size: 7px; text-align: center; }
+.opportunity-actions article p { margin: 9px 0 0; color: #3f4650; font-size: 8px; line-height: 1.55; }
+.opportunity-actions article small { display: block; margin-top: 9px; color: #777f89; font-size: 7px; line-height: 1.5; }
+.course-voice .opportunity-plan { margin-top: 16px; }
 .inline-metrics span, .inline-metrics small, .inline-analysis span, .inline-analysis small { display: block; color: #85858b; font-size: 8px; }
 .inline-metrics strong { display: block; margin: 10px 0 6px; font-size: 22px; letter-spacing: -.035em; }
 .inline-analysis strong { display: block; margin: 9px 0 6px; overflow-wrap: anywhere; font-size: 12px; }
@@ -1202,6 +1217,7 @@ html, body { background: #fff; }
   .focus-summary article + article { border-top: 1px solid #e1e1e5; }
   .inline-analysis { grid-template-columns: 1fr; }
   .focus-summary > .instructor-summary-layout { grid-template-columns: 1fr; }
+  .opportunity-actions { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   .survey-toolbar.people { width: 100%; }

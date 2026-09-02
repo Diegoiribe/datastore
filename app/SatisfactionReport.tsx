@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   CategoryDashboard,
   SatisfactionComment,
   SatisfactionMetricRow,
-  loadDashboardDetails,
 } from "../lib/dashboard-data";
 import PopupFilter from "./ToolbarPopupFilter";
 
@@ -84,6 +83,41 @@ function normalizeComment(item: SatisfactionComment): SatisfactionComment {
   return { ...item, record_type: raw.record_type ?? "comment", mes: raw.mes ?? String(raw.fecha ?? "").slice(0, 7), sentiment, theme, count: Number(raw.count ?? 1), example: raw.example ?? text };
 }
 
+const opportunityProposals: Record<string, string> = {
+  "Equipo y materiales": "Validar equipo, materiales y accesos antes de iniciar; preparar un respaldo para evitar interrupciones.",
+  "Duración y ritmo": "Ajustar la agenda por bloques, incorporar pausas de verificación y reservar tiempo para práctica y preguntas.",
+  "Explicación clara": "Explicar cada concepto con un ejemplo, comprobar comprensión y cerrar el bloque con una síntesis breve.",
+  "Dinámica y participación": "Agregar ejercicios aplicados y preguntas dirigidas para involucrar al grupo de forma constante.",
+  "Atención y dudas": "Abrir espacios explícitos para dudas y confirmar que cada pregunta quede resuelta antes de avanzar.",
+  "Dominio del tema": "Reforzar la preparación del contenido y anticipar preguntas frecuentes con ejemplos del contexto laboral.",
+  Modalidad: "Revisar que la modalidad, plataforma y logística faciliten la participación y el acceso al contenido.",
+  "Mejora general": "Revisar los comentarios de oportunidad con el instructor y acordar una acción concreta para la siguiente sesión.",
+};
+
+function OpportunityPlan({ items }: { items: SatisfactionComment[] }) {
+  const negativeItems = items.filter((item) => item.sentiment === "negative");
+  const source = negativeItems.some((item) => item.record_type === "theme")
+    ? negativeItems.filter((item) => item.record_type === "theme")
+    : negativeItems.filter((item) => item.record_type === "comment");
+  const actions = [...source.reduce((groups, item) => {
+    const theme = item.theme || "Mejora general";
+    const current = groups.get(theme) ?? { theme, count: 0, proposal: item.proposal || opportunityProposals[theme] || opportunityProposals["Mejora general"], example: "" };
+    current.count += Number(item.count || 1);
+    if (!current.example && isSubstantiveComment(item.comentario ?? item.example)) current.example = String(item.comentario ?? item.example);
+    if (item.proposal) current.proposal = item.proposal;
+    groups.set(theme, current);
+    return groups;
+  }, new Map<string, { theme: string; count: number; proposal: string; example: string }>()).values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+  if (!actions.length) return null;
+  const opportunityCount = actions.reduce((total, item) => total + item.count, 0);
+  return <section className="opportunity-plan">
+    <div className="opportunity-plan-heading"><div><span>Propuestas de mejora</span><small>Acciones sugeridas a partir de las oportunidades repetidas</small></div><b>{opportunityCount.toLocaleString("es-MX")} menciones</b></div>
+    <div className="opportunity-actions">{actions.map((item) => <article key={item.theme}><div><span>{item.theme}</span><b>{item.count.toLocaleString("es-MX")}</b></div><p>{item.proposal}</p>{item.example && <small>Señal detectada: “{item.example}”</small>}</article>)}</div>
+  </section>;
+}
+
 function TrendChart({ items, months, onMonthsChange }: { items: Array<{ label: string; responses: number; isa: number }>; months: number; onMonthsChange(value: number): void }) {
   if (!items.length) return <p className="comments-empty">No hay periodos para esta selección.</p>;
   const maxResponses = Math.max(...items.map((item) => item.responses), 1);
@@ -97,7 +131,7 @@ function TrendChart({ items, months, onMonthsChange }: { items: Array<{ label: s
   </div><p className="chart-reading"><strong>Cómo leerla:</strong> cada dato usa su propia fila: ISA se mide sobre 100 y Encuestas se compara contra el mes con mayor volumen.</p></div>;
 }
 
-export default function SatisfactionReport({ dashboard }: { dashboard: CategoryDashboard }) {
+export default function SatisfactionReport({ dashboard, details, detailsError = "" }: { dashboard: CategoryDashboard; details: SatisfactionComment[]; detailsError?: string }) {
   const rows = dashboard.metrics as SatisfactionMetricRow[];
   const [year, setYear] = useState("all");
   const [month, setMonth] = useState("all");
@@ -110,8 +144,6 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
   const [instructorSearch, setInstructorSearch] = useState("");
   const [instructorSearchOpen, setInstructorSearchOpen] = useState(false);
   const [commentTone, setCommentTone] = useState<"all" | "positive" | "negative">("all");
-  const [comments, setComments] = useState<SatisfactionComment[]>([]);
-  const [commentsError, setCommentsError] = useState("");
   const [showAllRubrics, setShowAllRubrics] = useState(false);
   const [showAllInstructors, setShowAllInstructors] = useState(false);
   const [showAllPrograms, setShowAllPrograms] = useState(false);
@@ -124,6 +156,8 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
   const [openFilterMenu, setOpenFilterMenu] = useState<string | null>(null);
   const insightContentRef = useRef<HTMLDivElement>(null);
   const [insightHeight, setInsightHeight] = useState<number>();
+  const comments = useMemo(() => details.map(normalizeComment).filter((item) => isSubstantiveComment(item.comentario ?? item.example)), [details]);
+  const commentsError = detailsError;
 
   useLayoutEffect(() => {
     const content = insightContentRef.current;
@@ -134,14 +168,6 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
     observer.observe(content);
     return () => observer.disconnect();
   }, [insightView, showAllRubrics, trendMonths]);
-
-  useEffect(() => {
-    let active = true;
-    loadDashboardDetails(dashboard)
-      .then((items) => { if (active) setComments(items.map(normalizeComment).filter((item) => isSubstantiveComment(item.comentario ?? item.example))); })
-      .catch((error: Error) => { if (active) setCommentsError(error.message); });
-    return () => { active = false; };
-  }, [dashboard]);
 
   const instructorLabels = useMemo(() => {
     const groups = new Map<string, Map<string, number>>();
@@ -235,6 +261,7 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
         </>}
       </div>
       <section className="topic-summary"><div className="topic-heading"><div><span>{hasCommentTopics ? "Temas mencionados" : "Rubros evaluados"}</span><small>{hasCommentTopics ? "Frecuencia y cambio contra el periodo anterior" : "Evaluaciones y variación de puntaje contra el periodo anterior"}</small></div><b>{hasCommentTopics ? `${mentionTotal.toLocaleString("es-MX")} menciones` : `${value.respuestas.toLocaleString("es-MX")} encuestas`}</b></div><div className="topic-table"><div className="topic-table-head"><span>{hasCommentTopics ? "Tema" : "Rubro"}</span><span>{hasCommentTopics ? "Menciones" : "Evaluaciones"}</span><span>Tendencia</span></div>{topics.map((item) => <div className="topic-row" key={item.label}><strong>{item.label}</strong><span>{item.count.toLocaleString("es-MX")}</span><span className={item.trend === null ? "up" : item.trend === 0 ? "steady" : item.trend > 0 ? "up" : "down"}>{item.trend === null ? "↑ Nuevo" : item.trend === 0 ? "— Estable" : `${item.trend > 0 ? "↑" : "↓"} ${Math.abs(item.trend)}${item.unit}`}</span></div>)}</div>{hasCommentTopics && commentTopics[0]?.example && <p className="topic-example"><strong>Comentario representativo:</strong> “{commentTopics[0].example}”</p>}</section>
+      <OpportunityPlan items={insightDetails} />
     </section>;
   };
 
@@ -250,7 +277,7 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
     const voiceCount = themeCount || recentCourseComments.length;
     const commentScope = usesRepresentativeComments ? "Comentarios representativos de los temas del curso" : exactCourseDetails.length ? "Comentarios recibidos en este curso" : programDetails.length ? "Comentarios asociados al programa de este curso" : "Comentarios recibidos en este curso";
     const courseComments = allCourseComments.filter((item) => commentTone === "all" || item.sentiment === commentTone);
-    return <section className="course-voice"><div className="course-voice-heading"><div><span>Voz del participante</span><small>{commentScope}</small></div><b>{voiceCount.toLocaleString("es-MX")}</b></div><div className="tone-tabs" role="group" aria-label={`Filtrar comentarios de ${courseLabel}`}><button className={commentTone === "all" ? "active" : ""} onClick={() => setCommentTone("all")}>Todos</button><button className={commentTone === "positive" ? "active" : ""} onClick={() => setCommentTone("positive")}>Positivos</button><button className={commentTone === "negative" ? "active" : ""} onClick={() => setCommentTone("negative")}>Negativos</button></div>{commentsError ? <p className="comments-empty">{commentsError}</p> : courseComments.length ? <><SmoothList open={showAllComments} visible={4} className="comment-list course-comment-list">{courseComments.slice(0, 16).map((item, index) => <blockquote key={`${item.fecha ?? item.theme}-${index}`}><span className={`comment-tone ${item.sentiment}`}>{item.sentiment === "negative" ? "Oportunidad" : item.sentiment === "positive" ? "Positivo" : "Comentario"}</span><p>{item.comentario}</p><footer>Comentario anónimo{item.fecha && <span>{item.fecha}</span>}</footer></blockquote>)}</SmoothList>{courseComments.length > 4 && <MoreButton open={showAllComments} count={Math.min(12, courseComments.length - 4)} onClick={() => setShowAllComments((current) => !current)} />}</> : <p className="comments-empty">No hay comentarios escritos para este curso o programa.</p>}</section>;
+    return <section className="course-voice"><div className="course-voice-heading"><div><span>Voz del participante</span><small>{commentScope}</small></div><b>{voiceCount.toLocaleString("es-MX")}</b></div><OpportunityPlan items={scopedDetails} /><div className="tone-tabs" role="group" aria-label={`Filtrar comentarios de ${courseLabel}`}><button className={commentTone === "all" ? "active" : ""} onClick={() => setCommentTone("all")}>Todos</button><button className={commentTone === "positive" ? "active" : ""} onClick={() => setCommentTone("positive")}>Positivos</button><button className={commentTone === "negative" ? "active" : ""} onClick={() => setCommentTone("negative")}>Negativos</button></div>{commentsError ? <p className="comments-empty">{commentsError}</p> : courseComments.length ? <><SmoothList open={showAllComments} visible={4} className="comment-list course-comment-list">{courseComments.slice(0, 16).map((item, index) => <blockquote key={`${item.fecha ?? item.theme}-${index}`}><span className={`comment-tone ${item.sentiment}`}>{item.sentiment === "negative" ? "Oportunidad" : item.sentiment === "positive" ? "Positivo" : "Comentario"}</span><p>{item.comentario}</p><footer>Comentario anónimo{item.fecha && <span>{item.fecha}</span>}</footer></blockquote>)}</SmoothList>{courseComments.length > 4 && <MoreButton open={showAllComments} count={Math.min(12, courseComments.length - 4)} onClick={() => setShowAllComments((current) => !current)} />}</> : <p className="comments-empty">No hay comentarios escritos para este curso o programa.</p>}</section>;
   };
 
   return <>
@@ -288,7 +315,7 @@ export default function SatisfactionReport({ dashboard }: { dashboard: CategoryD
 
       {instructorMode && selectedInstructorKeys.length > 0 && <article className="panel survey-panel instructor-courses-panel"><div className="panel-heading"><div><span>Cursos y voz del participante</span><small>Cursos del periodo y filtros seleccionados</small></div><b>{instructorCourses.length.toLocaleString("es-MX")}</b></div><div className="program-table instructor-course-table">{instructorCourses.map((item) => <div className="expandable-row" key={item.label}><button className={expandedInstructorCourse === item.label ? "selected" : ""} onClick={() => { setExpandedInstructorCourse((current) => current === item.label ? null : item.label); setCommentTone("all"); setShowAllComments(false); }} aria-expanded={expandedInstructorCourse === item.label}><span className="course-heading"><span className="course-label">{item.label}</span>{item.isTeam && <mark className="course-team-tag" title={`Resultado ponderado de ${item.contributorCount} instructores`}>Equipo</mark>}</span><i><b style={{ width: `${item.isa}%` }} /></i><strong>{item.isa.toFixed(1)}%</strong><em>NPS {item.nps.toFixed(1)}</em><small className="course-meta">{item.programLabel} · {item.responses.toLocaleString("es-MX")} encuestas · {item.commentCount ? `${item.commentCount.toLocaleString("es-MX")} comentarios` : "sin comentarios escritos"}{item.isTeam ? ` · ponderado por ${item.responses.toLocaleString("es-MX")} respuestas de ${item.contributorCount} instructores` : ""}</small></button>{expandedInstructorCourse === item.label && instructorCourseVoice(item.label, item.programs)}</div>)}</div></article>}
 
-      {!instructorMode && <article className="panel survey-panel comments-panel"><div className="panel-heading"><div><span>Voz del participante</span><small>Temas repetidos y comentarios según la selección</small></div><b>{voiceTotal.toLocaleString("es-MX")}</b></div><div className="tone-tabs" role="group" aria-label="Filtrar comentarios"><button className={commentTone === "all" ? "active" : ""} onClick={() => setCommentTone("all")}>Todos</button><button className={commentTone === "positive" ? "active" : ""} onClick={() => setCommentTone("positive")}>Positivos</button><button className={commentTone === "negative" ? "active" : ""} onClick={() => setCommentTone("negative")}>Oportunidades</button></div>
+      {!instructorMode && <article className="panel survey-panel comments-panel"><div className="panel-heading"><div><span>Voz del participante</span><small>Temas repetidos y comentarios según la selección</small></div><b>{voiceTotal.toLocaleString("es-MX")}</b></div><OpportunityPlan items={matchingDetails} /><div className="tone-tabs" role="group" aria-label="Filtrar comentarios"><button className={commentTone === "all" ? "active" : ""} onClick={() => setCommentTone("all")}>Todos</button><button className={commentTone === "positive" ? "active" : ""} onClick={() => setCommentTone("positive")}>Positivos</button><button className={commentTone === "negative" ? "active" : ""} onClick={() => setCommentTone("negative")}>Oportunidades</button></div>
         {commentsError ? <p className="comments-empty">{commentsError}</p> : visibleVoiceComments.length ? <><SmoothList open={showAllComments} visible={6} className="comment-list">{visibleVoiceComments.slice(0, 18).map((item, index) => <blockquote key={`${item.fecha ?? item.theme}-${index}`}><span className={`comment-tone ${item.sentiment}`}>{item.sentiment === "negative" ? "Oportunidad" : item.sentiment === "positive" ? "Positivo" : "Comentario"}</span><p>{item.comentario}</p><footer>{item.programa}<span>{item.fecha || "Comentario representativo"}</span></footer></blockquote>)}</SmoothList>{visibleVoiceComments.length > 6 && <MoreButton open={showAllComments} count={Math.min(12, visibleVoiceComments.length - 6)} onClick={() => setShowAllComments((current) => !current)} />}</> : <p className="comments-empty">No hay comentarios para esta selección.</p>}
       </article>}
     </section>
