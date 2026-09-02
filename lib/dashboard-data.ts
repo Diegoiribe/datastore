@@ -99,12 +99,12 @@ export type CategoryDashboard = {
   nps: number;
   scoreFiveResponses: number;
   npsScaleStatus: string;
+  publicationRevision: number;
 };
 
 export type EicAdministrativeRow = Record<string, string | number | boolean | null>;
 export type EicAdministrativeViews = Record<string, EicAdministrativeRow[]>;
 
-const dashboardCache = new Map<string, Promise<CategoryDashboard>>();
 const pendingDashboardCache = new Map<string, Promise<PendingRow[]>>();
 const detailDashboardCache = new Map<string, Promise<SatisfactionComment[]>>();
 const API_BASE_URL = (
@@ -112,7 +112,7 @@ const API_BASE_URL = (
 ).replace(/\/$/, "");
 
 async function requestJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store" });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(
@@ -135,15 +135,9 @@ export async function listCategories() {
 }
 
 export function loadCategoryDashboard(category: string, period: string) {
-  const cacheKey = `${category}/${period}`;
-  if (!dashboardCache.has(cacheKey)) {
-    const request = fetchCategoryDashboard(category, period).catch((error) => {
-      dashboardCache.delete(cacheKey);
-      throw error;
-    });
-    dashboardCache.set(cacheKey, request);
-  }
-  return dashboardCache.get(cacheKey)!;
+  // La misma categoría y periodo se reemplazan al volver a publicar. Siempre
+  // consulta la cabecera para conocer la revisión vigente.
+  return fetchCategoryDashboard(category, period);
 }
 
 async function fetchCategoryDashboard(category: string, period: string) {
@@ -156,7 +150,7 @@ export function loadPendingSection(
   dashboard: CategoryDashboard,
   section: PendingSection,
 ) {
-  const cacheKey = `${dashboard.category}/${dashboard.period}`;
+  const cacheKey = `${dashboard.category}/${dashboard.period}/${dashboard.publicationRevision}`;
   if (!pendingDashboardCache.has(cacheKey)) {
     const request = fetchPendingDashboard(dashboard).catch((error) => {
       pendingDashboardCache.delete(cacheKey);
@@ -178,7 +172,7 @@ async function fetchPendingDashboard(dashboard: CategoryDashboard) {
 }
 
 export function loadDashboardDetails(dashboard: CategoryDashboard) {
-  const cacheKey = `${dashboard.category}/${dashboard.period}`;
+  const cacheKey = `${dashboard.category}/${dashboard.period}/${dashboard.publicationRevision}`;
   if (!detailDashboardCache.has(cacheKey)) {
     const request = requestJson<SatisfactionComment[]>(
       `/api/dashboard/${encodeURIComponent(dashboard.period)}/${encodeURIComponent(dashboard.category)}/details`,
