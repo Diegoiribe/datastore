@@ -873,21 +873,16 @@ html, body { background: #fff; }
 .comment-list footer span { display: block; margin-top: 4px; color: #aaaab0; }
 .comments-empty { margin: 20px 0 0; color: #8e8e93; font-size: 10px; }
 
-/* Satisfaction palettes. Semantic success/warning/error colors remain stable;
-   the chosen palette controls hierarchy, charts, selections and surfaces. */
+/* Satisfaction uses the fixed institutional yellow/blue palette. Semantic
+   success/warning/error colors and the floating filter menu remain neutral. */
 .sheet.survey-themed { --survey-accent: #1d1d1f; --survey-secondary: #8e8e93; --survey-deep: #000; --survey-action: #3a3a3c; }
-.sheet-title.survey-letterhead { position: relative; padding-right: 48px; }
-.survey-letterhead > .tienda-accent-picker { position: absolute; top: 0; right: 0; }
+.sheet-title.survey-letterhead { display: block; }
+.survey-letterhead-top { display: flex; align-items: flex-start; margin: -36px -24px 30px; }
 .sheet.survey-themed .sheet-title-copy .eyebrow { color: var(--survey-action); transition: color .24s ease; }
 .sheet.survey-themed .sheet-title-copy h2,
 .sheet.survey-themed .survey-lead h3,
 .sheet.survey-themed .survey-kpis strong,
 .sheet.survey-themed .panel-heading b { color: var(--survey-deep); transition: color .24s ease; }
-.sheet.survey-themed .survey-toolbar { border-color: color-mix(in srgb, var(--survey-secondary) 34%, #dedee3); background: color-mix(in srgb, var(--survey-secondary) 7%, white); }
-.sheet.survey-themed .toolbar-popup-trigger:hover,
-.sheet.survey-themed .toolbar-popup-filter.open .toolbar-popup-trigger,
-.sheet.survey-themed .survey-search:focus-within { background: color-mix(in srgb, var(--survey-secondary) 15%, white); color: var(--survey-deep); }
-.sheet.survey-themed .toolbar-popup-options button.active i { background: var(--survey-action); box-shadow: 0 0 0 3px color-mix(in srgb, var(--survey-action) 14%, transparent); }
 .sheet.survey-themed .survey-kpis { border-color: color-mix(in srgb, var(--survey-secondary) 35%, #dedee3); }
 .sheet.survey-themed .survey-kpis article:nth-child(odd) { background: color-mix(in srgb, var(--survey-secondary) 4%, white); }
 .sheet.survey-themed .quality-note,
@@ -912,7 +907,6 @@ html, body { background: #fff; }
 .sheet.survey-themed .course-team-tag { background: color-mix(in srgb, var(--survey-secondary) 14%, white); color: var(--survey-deep); }
 .sheet.survey-themed .show-more-button { border-color: color-mix(in srgb, var(--survey-secondary) 28%, #e1e1e5); color: var(--survey-deep); }
 .sheet.survey-themed .more-icon-shell { background: color-mix(in srgb, var(--survey-secondary) 18%, white); color: var(--survey-action); }
-.sheet.survey-themed .accent-swatch.is-selected { box-shadow: 0 0 0 2px color-mix(in srgb, var(--survey-action) 30%, #e3e3e7); }
 .sheet.survey-themed :is(.survey-bars i b, .rubric-list i b, .program-table i b, .metric-track b, .chart-isa-line, .chart-point, .chart-volume-bar) { transition: background .24s ease, fill .24s ease, stroke .24s ease; }
 
 @media (max-width: 980px) {
@@ -923,6 +917,7 @@ html, body { background: #fff; }
   .instructor-panel, .program-panel, .comments-panel { grid-column: 1; }
 }
 @media (max-width: 640px) {
+  .survey-letterhead-top { margin: -20px -14px 25px; }
   .survey-filter { min-width: 118px; flex: 0 0 118px; }
   .quality-note { grid-template-columns: 1fr; gap: 6px; }
   .comment-list { grid-template-columns: 1fr; }

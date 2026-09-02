@@ -26,14 +26,11 @@ const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerent
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const staffCollectionCategory: CategoryOption = { key: "staff_collection", label: "Staff" };
 const collectionTabColors = ["#f4cb63", "#f2a895", "#b9dcae", "#9ec9eb", "#c8b7df", "#efb8d5", "#a8d9d2"];
-const tiendaAccentOptions = [
-  { key: "institutional", label: "Amarillo institucional", accent: "#F0D224", secondary: "#1C42E8", deep: "#081754", action: "#F0D224", swatch: "linear-gradient(90deg, #F0D224 0 56%, #1C42E8 56% 78%, #081754 78% 100%)" },
-  { key: "yellow_sky", label: "Amarillo cielo", accent: "#F4CF24", secondary: "#1CA8F7", deep: "#082750", action: "#C9A400", swatch: "linear-gradient(90deg, #F4CF24 0 58%, #1CA8F7 58% 82%, #082750 82% 100%)" },
-  { key: "monochrome", label: "Monocromática", accent: "#1D1D1F", secondary: "#8E8E93", deep: "#000000", action: "#3A3A3C", swatch: "linear-gradient(90deg, #111113 0 38%, #8E8E93 38% 68%, #F4F4F6 68% 100%)" },
-  { key: "yellow_coral", label: "Amarillo coral", accent: "#F2CC22", secondary: "#EF8B72", deep: "#4B2430", action: "#C7A200", swatch: "linear-gradient(90deg, #F2CC22 0 58%, #EF8B72 58% 82%, #4B2430 82% 100%)" },
-  { key: "yellow_cobalt", label: "Amarillo cobalto", accent: "#F0D224", secondary: "#2446E8", deep: "#081754", action: "#C5A400", swatch: "linear-gradient(90deg, #F0D224 0 62%, #2446E8 62% 83%, #081754 83% 100%)" },
-  { key: "yellow_sage", label: "Amarillo salvia", accent: "#EFCF35", secondary: "#77A88C", deep: "#173B31", action: "#B99700", swatch: "linear-gradient(90deg, #EFCF35 0 60%, #77A88C 60% 83%, #173B31 83% 100%)" },
-];
+const institutionalPalette = {
+  accent: "#F0D224",
+  secondary: "#1C42E8",
+  deep: "#081754",
+};
 
 function textKey(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, " ").trim();
@@ -92,30 +89,6 @@ function CollectionBookCover({ category, chapters, compact = false }: { category
       {chapters.map((chapter, index) => <i key={chapter.key} style={{ "--tab-color": collectionTabColors[index % collectionTabColors.length] } as CSSProperties}>{String(index + 1).padStart(2, "0")}</i>)}
     </span>
   </span>;
-}
-
-function AccentPicker({ value, open, onOpenChange, onChange, label }: {
-  value: (typeof tiendaAccentOptions)[number];
-  open: boolean;
-  onOpenChange(open: boolean): void;
-  onChange(value: (typeof tiendaAccentOptions)[number]): void;
-  label: string;
-}) {
-  return <div className={open ? "tienda-accent-picker is-open" : "tienda-accent-picker"}>
-    <div className="accent-options" aria-hidden={!open}>
-      <div>{tiendaAccentOptions.map((option) => <button
-        type="button"
-        key={option.key}
-        className={option.key === value.key ? "accent-swatch is-selected" : "accent-swatch"}
-        style={{ background: option.swatch }}
-        aria-label={`Usar paleta ${option.label}`}
-        aria-pressed={option.key === value.key}
-        disabled={!open}
-        onClick={() => { onChange(option); onOpenChange(false); }}
-      />)}</div>
-    </div>
-    <button type="button" className="accent-swatch accent-toggle" style={{ background: value.swatch }} aria-label={label} aria-expanded={open} onClick={() => onOpenChange(true)} />
-  </div>;
 }
 
 function blobToDataUrl(blob: Blob) {
@@ -240,8 +213,6 @@ export default function Home() {
   const [pendingError, setPendingError] = useState("");
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [showAllCourses, setShowAllCourses] = useState(false);
-  const [surveyAccent, setSurveyAccent] = useState(tiendaAccentOptions[2]);
-  const [surveyAccentPickerOpen, setSurveyAccentPickerOpen] = useState(false);
   const [readerMode, setReaderMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [usingDemo, setUsingDemo] = useState(true);
@@ -733,13 +704,15 @@ export default function Home() {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": tiendaAccentOptions[0].accent, "--tienda-secondary": tiendaAccentOptions[0].secondary, "--tienda-deep": tiendaAccentOptions[0].deep, "--tienda-action": tiendaAccentOptions[0].accent } as CSSProperties : activeSurvey ? { "--survey-accent": surveyAccent.accent, "--survey-secondary": surveyAccent.secondary, "--survey-deep": surveyAccent.deep, "--survey-action": surveyAccent.action } as CSSProperties : undefined}>
+          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : activeSurvey ? { "--survey-accent": institutionalPalette.accent, "--survey-secondary": institutionalPalette.secondary, "--survey-deep": institutionalPalette.deep, "--survey-action": institutionalPalette.accent } as CSSProperties : undefined}>
             <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : activeSurvey ? "sheet-title survey-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
               </div>}
+              {activeSurvey && <div className="survey-letterhead-top">
+                <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
+              </div>}
               <div className="sheet-title-copy">{openBook !== "tienda" && <span className="eyebrow">{activeEic ? "GESTIÓN DE CAPACITACIÓN" : reportIsSurvey ? "EXPERIENCIA DE APRENDIZAJE" : peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{activeEic ? "Estatus de planes de capacitación" : reportIsSurvey ? "Satisfacción" : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
-              {activeSurvey && <AccentPicker value={surveyAccent} open={surveyAccentPickerOpen} onOpenChange={setSurveyAccentPickerOpen} onChange={setSurveyAccent} label="Mostrar paletas de la encuesta" />}
             </header>
 
             {loading && tiendaPeriodReady ? <ReportSkeleton survey={reportIsSurvey} /> : <div className="report-content">
