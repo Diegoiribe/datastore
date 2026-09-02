@@ -264,17 +264,19 @@ export default function EicStatusReport({
       </section>
 
       <section className="eic-authorized-plan">
-        <header><h4>Solicitados en Plan Autorizado</h4><p>Desglose de necesidades y modalidades de capacitación</p></header>
-        <div className="eic-authorized-grid">
-          <AuthorizedMetric label="DNCs" value={authorizedPlan.dnc} />
-          <AuthorizedMetric label="Extra Plan" value={authorizedPlan.extraPlan} />
-          <AuthorizedMetric label="Cursos" value={authorizedPlan.courses} />
-          <AuthorizedMetric label="Eventos" value={authorizedPlan.events} />
-          <AuthorizedMetric label="Programas ejecutivos" value={authorizedPlan.executivePrograms} />
-          <AuthorizedMetric label="Certificaciones" value={authorizedPlan.certifications} />
-          <AuthorizedMetric label="Membresías" value={authorizedPlan.memberships} />
-          <AuthorizedMetric label="Suscripciones" value={authorizedPlan.subscriptions} />
-          <AuthorizedMetric label="Pax proyectados" value={authorizedPlan.projectedPeople} />
+        <header><div><h4>Solicitados en Plan Autorizado</h4><p>Desglose de necesidades y modalidades de capacitación</p></div><small className="eic-scroll-hint"><span aria-hidden="true">↔</span> Desliza para ver más</small></header>
+        <div className="eic-authorized-window" role="region" aria-label="Indicadores del Plan Autorizado; desplázate horizontalmente para verlos todos">
+          <div className="eic-authorized-grid">
+            <AuthorizedMetric label="DNCs" value={authorizedPlan.dnc} />
+            <AuthorizedMetric label="Extra Plan" value={authorizedPlan.extraPlan} />
+            <AuthorizedMetric label="Cursos" value={authorizedPlan.courses} />
+            <AuthorizedMetric label="Eventos" value={authorizedPlan.events} />
+            <AuthorizedMetric label="Programas ejecutivos" value={authorizedPlan.executivePrograms} />
+            <AuthorizedMetric label="Certificaciones" value={authorizedPlan.certifications} />
+            <AuthorizedMetric label="Membresías" value={authorizedPlan.memberships} />
+            <AuthorizedMetric label="Suscripciones" value={authorizedPlan.subscriptions} />
+            <AuthorizedMetric label="Pax proyectados" value={authorizedPlan.projectedPeople} />
+          </div>
         </div>
       </section>
 
