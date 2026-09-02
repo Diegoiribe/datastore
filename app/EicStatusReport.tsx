@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   CategoryDashboard,
   EicAdministrativeRow,
@@ -88,6 +88,8 @@ export default function EicStatusReport({
   const [initiativeQuery, setInitiativeQuery] = useState("");
   const [initiativeStatus, setInitiativeStatus] = useState("all");
   const [openFilter, setOpenFilter] = useState<string | null>(null);
+  const [authorizedNav, setAuthorizedNav] = useState({ back: false, forward: true });
+  const authorizedWindowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -97,6 +99,26 @@ export default function EicStatusReport({
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [dashboard]);
+
+  useEffect(() => {
+    const node = authorizedWindowRef.current;
+    if (!node || loading) return;
+    const sync = () => setAuthorizedNav({
+      back: node.scrollLeft > 2,
+      forward: node.scrollLeft + node.clientWidth < node.scrollWidth - 2,
+    });
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [cLevel, loading, views]);
+
+  const moveAuthorizedPlan = (direction: -1 | 1) => {
+    const node = authorizedWindowRef.current;
+    if (!node) return;
+    const card = node.querySelector<HTMLElement>("article");
+    node.scrollBy({ left: direction * (card?.offsetWidth ?? 110), behavior: "smooth" });
+  };
 
   const allDirections = useMemo(() => views.directions ?? [], [views.directions]);
   const cLevels = useMemo(() => [...new Set((views.c_level ?? []).map((row) => text(row, "direccion_c_level")))].sort(), [views.c_level]);
@@ -264,8 +286,8 @@ export default function EicStatusReport({
       </section>
 
       <section className="eic-authorized-plan">
-        <header><div><h4>Solicitados en Plan Autorizado</h4><p>Desglose de necesidades y modalidades de capacitación</p></div><small className="eic-scroll-hint"><span aria-hidden="true">↔</span> Desliza para ver más</small></header>
-        <div className="eic-authorized-window" role="region" aria-label="Indicadores del Plan Autorizado; desplázate horizontalmente para verlos todos">
+        <header><div><h4>Solicitados en Plan Autorizado</h4><p>Desglose de necesidades y modalidades de capacitación</p></div><div className="eic-carousel-controls" aria-label="Navegar por los indicadores"><button type="button" className="eic-carousel-arrow previous" onClick={() => moveAuthorizedPlan(-1)} disabled={!authorizedNav.back} aria-label="Ver indicador anterior" /><button type="button" className="eic-carousel-arrow next" onClick={() => moveAuthorizedPlan(1)} disabled={!authorizedNav.forward} aria-label="Ver siguiente indicador" /></div></header>
+        <div ref={authorizedWindowRef} className="eic-authorized-window" role="region" aria-label="Indicadores del Plan Autorizado" onScroll={(event) => { const node = event.currentTarget; setAuthorizedNav({ back: node.scrollLeft > 2, forward: node.scrollLeft + node.clientWidth < node.scrollWidth - 2 }); }}>
           <div className="eic-authorized-grid">
             <AuthorizedMetric label="DNCs" value={authorizedPlan.dnc} />
             <AuthorizedMetric label="Extra Plan" value={authorizedPlan.extraPlan} />
@@ -339,6 +361,7 @@ export default function EicStatusReport({
           <label className="eic-initiative-search"><i aria-hidden="true">⌕</i><input value={initiativeQuery} onChange={(event) => setInitiativeQuery(event.target.value)} placeholder="Buscar plan, capacitación, ID o proveedor" aria-label="Buscar planes y capacitaciones" /></label>
           <PopupFilter label="Estatus" className="course-filter eic-status-filter" value={effectiveInitiativeStatus} options={[{ value: "all", label: "Todos los estatus" }, ...initiativeStatuses.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-status"} onOpenChange={(open) => setOpenFilter(open ? "eic-status" : null)} onChange={setInitiativeStatus} />
         </div>
+        <div className="eic-initiative-head" aria-hidden="true"><span>ID</span><span>Plan o capacitación</span><span>Estatus</span><span>Inversión</span></div>
         <div className="eic-initiative-list">
           {visibleInitiatives.map((row, index) => <article key={`${text(row, "identificador")}-${index}`}>
             <span className="eic-initiative-id">{text(row, "identificador", "S/ID")}</span>
