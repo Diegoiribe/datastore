@@ -27,6 +27,7 @@ type CategoryOption = {
 const tiendaChapterKeys = ["almacenista", "asesor", "cajero", "gerente", "gerente_zona"];
 const tiendaCategory: CategoryOption = { key: "tienda", label: "Tienda" };
 const staffCollectionCategory: CategoryOption = { key: "staff_collection", label: "Staff" };
+const trainingPlansCollectionCategory: CategoryOption = { key: "training_plans_collection", label: "Planes de capacitación" };
 const collectionTabColors = ["#f4cb63", "#f2a895", "#b9dcae", "#9ec9eb", "#c8b7df", "#efb8d5", "#a8d9d2"];
 const institutionalPalette = {
   accent: "#F0D224",
@@ -46,6 +47,8 @@ function textKey(value: string) {
 function reportFamily(category: CategoryOption) {
   if (category.key === "tienda") return { label: "Colección", description: "Cinco capítulos del equipo de Tienda" };
   if (category.key === "staff_collection") return { label: "Colección", description: "Reportes de capacitación del equipo Staff" };
+  if (category.key === "training_plans_collection") return { label: "Colección", description: "Planes de capacitación organizados por dirección C-Level" };
+  if (category.collectionKey === "training_plans") return { label: "Planes", description: "Seguimiento presupuestal y operativo por dirección" };
   if (category.collectionKey === "staff") return { label: "Talento", description: "Seguimiento de capacitación corporativa" };
   if (category.key === "encuesta_de_satisfaccion") return { label: "Experiencia", description: "Satisfacción, recomendación y voz del participante" };
   if (category.key === "eic_administrativa") return { label: "Gestión", description: "Presupuesto y operación de la Dirección de Administración GC" };
@@ -241,7 +244,13 @@ export default function Home() {
     listCategories()
       .then((items) => {
         if (items.length) {
-          setCategories(items.map(({ key, label, collectionKey, collectionLabel, history }) => ({ key, label: key === "eic_administrativa" ? "Dirección de Administración GC" : label, collectionKey, collectionLabel, history })));
+          setCategories(items.map(({ key, label, collectionKey, collectionLabel, history }) => ({
+            key,
+            label: key === "eic_administrativa" ? "Dirección de Administración GC" : label,
+            collectionKey: key === "eic_administrativa" ? "training_plans" : collectionKey,
+            collectionLabel: key === "eic_administrativa" ? "Planes de capacitación" : collectionLabel,
+            history,
+          })));
           setSelectedCategories((current) => current.filter((key) => items.some((item) => item.key === key)));
           const latestPeriod = items.flatMap((item) => Object.keys(item.history ?? {})).sort().at(-1);
           if (latestPeriod) {
@@ -343,23 +352,29 @@ export default function Home() {
     () => categories.filter((category) => category.key === "staff" || category.collectionKey === "staff"),
     [categories],
   );
+  const trainingPlanChapters = useMemo(
+    () => categories.filter((category) => category.collectionKey === "training_plans"),
+    [categories],
+  );
   const chapterKeys = useMemo(
-    () => new Set([...tiendaChapters, ...staffChapters].map((category) => category.key)),
-    [staffChapters, tiendaChapters],
+    () => new Set([...tiendaChapters, ...staffChapters, ...trainingPlanChapters].map((category) => category.key)),
+    [staffChapters, tiendaChapters, trainingPlanChapters],
   );
   const libraryReports = useMemo(() => {
     const standalone = categories.filter((category) => !chapterKeys.has(category.key));
     return [
       ...(tiendaChapters.length ? [tiendaCategory] : []),
       staffCollectionCategory,
+      ...(trainingPlanChapters.length ? [trainingPlansCollectionCategory] : []),
       ...standalone,
     ];
-  }, [categories, chapterKeys, staffChapters.length, tiendaChapters.length]);
+  }, [categories, chapterKeys, tiendaChapters.length, trainingPlanChapters.length]);
   const collectionChapters = useCallback((key: string) => {
     if (key === "tienda") return tiendaChapters;
     if (key === "staff_collection") return staffChapters;
+    if (key === "training_plans_collection") return trainingPlanChapters;
     return [];
-  }, [staffChapters, tiendaChapters]);
+  }, [staffChapters, tiendaChapters, trainingPlanChapters]);
   const filteredReports = useMemo(() => {
     const query = textKey(reportQuery);
     return query ? libraryReports.filter((category) => {
@@ -464,8 +479,8 @@ export default function Home() {
     setSelectedCategories(nextSelection);
     if (!switchingReport) window.scrollTo({ top: 0, behavior: "auto" });
   };
-  const openCollectionBook = (collectionKey: "tienda" | "staff") => {
-    const chapters = collectionKey === "tienda" ? tiendaChapters : staffChapters;
+  const openCollectionBook = (collectionKey: "tienda" | "staff" | "training_plans") => {
+    const chapters = collectionKey === "tienda" ? tiendaChapters : collectionKey === "staff" ? staffChapters : trainingPlanChapters;
     const firstChapter = chapters[0];
     if (!firstChapter) return;
     resetCategoryFilters();
@@ -477,6 +492,7 @@ export default function Home() {
   const selectLibraryReport = (key: string) => {
     if (key === "tienda") openCollectionBook("tienda");
     else if (key === "staff_collection") openCollectionBook("staff");
+    else if (key === "training_plans_collection") openCollectionBook("training_plans");
     else {
       setOpenBook(null);
       selectCategory(key);
@@ -639,7 +655,7 @@ export default function Home() {
         {filteredReports.length ? <div className="book-library-grid">{filteredReports.map((category, index) => {
           const family = reportFamily(category);
           const chapters = collectionChapters(category.key);
-          const isCollection = category.key === "tienda" || category.key === "staff_collection";
+          const isCollection = category.key === "tienda" || category.key === "staff_collection" || category.key === "training_plans_collection";
           return <button className={isCollection ? "book-card collection" : "book-card"} key={category.key} onClick={() => selectLibraryReport(category.key)} style={{ animationDelay: `${index * 45}ms` }}>
             {isCollection ? <CollectionBookCover category={category} chapters={chapters} /> : <ReportCover category={category} />}
             <span className="book-card-copy"><span className="report-family-tag">{family.label}</span><strong>{category.label}</strong><small>{family.description}</small></span>
@@ -684,7 +700,7 @@ export default function Home() {
         <nav className="category-list" aria-label="Categorías del reporte">
           {filteredReports.map((category) => {
             const chapters = visibleCollectionChapters(category.key);
-            const collectionKey = category.key === "tienda" ? "tienda" : category.key === "staff_collection" ? "staff" : null;
+            const collectionKey = category.key === "tienda" ? "tienda" : category.key === "staff_collection" ? "staff" : category.key === "training_plans_collection" ? "training_plans" : null;
             if (collectionKey) return <div className="category-collection" key={category.key}>
               <button className="category collection-category" onClick={() => setExpandedBook((current) => current === category.key ? null : category.key)} aria-expanded={expandedBook === category.key}>
                 <CollectionBookCover category={category} chapters={collectionChapters(category.key)} compact />
