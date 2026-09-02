@@ -907,8 +907,18 @@ html, body { background: #fff; }
 .sheet.survey-themed .program-table .expandable-row > button.selected,
 .sheet.survey-themed .compact-ranking .expandable-row > button.selected { background: color-mix(in srgb, var(--survey-secondary) 14%, white); }
 .sheet.survey-themed .course-team-tag { background: color-mix(in srgb, var(--survey-secondary) 14%, white); color: var(--survey-deep); }
-.sheet.survey-themed .show-more-button { border-color: color-mix(in srgb, var(--survey-secondary) 28%, #e1e1e5); color: var(--survey-deep); }
-.sheet.survey-themed .more-icon-shell { background: color-mix(in srgb, var(--survey-secondary) 18%, white); color: var(--survey-action); }
+.sheet.survey-themed .show-more-button {
+  border-color: transparent;
+  background: var(--survey-accent);
+  color: white;
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--survey-accent) 20%, transparent);
+}
+.sheet.survey-themed .show-more-button:hover {
+  background: color-mix(in srgb, var(--survey-accent) 86%, white);
+  color: white;
+  transform: translateY(-1px);
+}
+.sheet.survey-themed .more-icon-shell { background: rgba(255,255,255,.18); color: white; }
 .sheet.survey-themed :is(.survey-bars i b, .rubric-list i b, .program-table i b, .metric-track b, .chart-isa-line, .chart-point, .chart-volume-bar) { transition: background .24s ease, fill .24s ease, stroke .24s ease; }
 
 @media (max-width: 980px) {

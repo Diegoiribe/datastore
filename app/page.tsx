@@ -31,6 +31,11 @@ const institutionalPalette = {
   secondary: "#1C42E8",
   deep: "#081754",
 };
+const satisfactionPalette = {
+  accent: "#F0D224",
+  secondary: "#7380A6",
+  deep: "#3F4D73",
+};
 
 function textKey(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").replace(/[^a-z0-9]+/g, " ").trim();
@@ -704,7 +709,7 @@ export default function Home() {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : activeSurvey ? { "--survey-accent": institutionalPalette.accent, "--survey-secondary": institutionalPalette.secondary, "--survey-deep": institutionalPalette.deep, "--survey-action": institutionalPalette.accent } as CSSProperties : undefined}>
+          <article className={`${loading && tiendaPeriodReady ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${activeSurvey ? " survey-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : activeSurvey ? { "--survey-accent": satisfactionPalette.accent, "--survey-secondary": satisfactionPalette.secondary, "--survey-deep": satisfactionPalette.deep, "--survey-action": satisfactionPalette.accent } as CSSProperties : undefined}>
             <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : activeSurvey ? "sheet-title tienda-letterhead survey-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
