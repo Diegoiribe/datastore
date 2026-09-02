@@ -550,14 +550,19 @@ html, body { background: #fff; }
 .eic-ranking-placeholder { min-height: 150px; display: grid; align-content: center; justify-items: center; padding: 32px; border-bottom: 1px solid #dedee3; text-align: center; }
 .eic-ranking-placeholder span { font-size: 11px; font-weight: 700; }
 .eic-ranking-placeholder p { max-width: 480px; margin: 8px 0 0; color: #8b8b91; font-size: 8px; line-height: 1.6; }
-.eic-ranking-table { margin-top: 18px; overflow-x: auto; }
-.eic-ranking-head, .eic-ranking-row { min-width: 900px; display: grid; grid-template-columns: 35px 88px minmax(150px, 1.15fr) minmax(180px, 1.3fr) minmax(150px, 1fr) 45px 105px; align-items: center; gap: 12px; }
+.eic-ranking-table { width: 100%; min-width: 0; margin-top: 18px; overflow: hidden; }
+.eic-ranking-head, .eic-ranking-row { width: 100%; min-width: 0; display: grid; grid-template-columns: 35px 88px minmax(120px, 1.35fr) repeat(var(--ranking-extra-columns, 1), minmax(78px, 1fr)); align-items: center; gap: 12px; }
 .eic-ranking-head { padding: 10px 11px; background: #edf2fb; color: #303034; font-size: 7px; font-weight: 720; letter-spacing: .02em; }
-.eic-ranking-head span:nth-last-child(-n+2) { text-align: right; }
+.eic-ranking-head > span, .eic-ranking-head > label { min-width: 0; }
+.eic-ranking-head .is-number { text-align: right; }
 .eic-ranking-row { min-height: 48px; padding: 9px 11px; border-bottom: 1px solid #dfdfe3; font-size: 8px; }
 .eic-ranking-row > span { min-width: 0; overflow: hidden; color: #77777d; text-overflow: ellipsis; white-space: nowrap; }
 .eic-ranking-row > strong { min-width: 0; overflow: hidden; font-size: 8.5px; text-overflow: ellipsis; white-space: nowrap; }
-.eic-ranking-row > span:nth-last-child(2), .eic-ranking-row > strong:last-child { text-align: right; }
+.eic-ranking-row > .is-number { text-align: right; }
+.eic-ranking-column-picker { position: relative; display: block; }
+.eic-ranking-column-picker::after { position: absolute; top: 50%; right: 2px; width: 5px; height: 5px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; content: ""; pointer-events: none; transform: translateY(-70%) rotate(45deg); }
+.eic-ranking-column-picker select { width: 100%; min-width: 0; height: 24px; padding: 0 15px 0 0; overflow: hidden; border: 0; outline: 0; appearance: none; background: transparent; color: inherit; font: inherit; font-weight: inherit; letter-spacing: inherit; text-overflow: ellipsis; cursor: pointer; }
+.eic-ranking-column-picker.is-number select { text-align: right; text-align-last: right; }
 .eic-ranking-foot { margin: 12px 0 0; color: #8b8b91; font-size: 8px; text-align: right; }
 .eic-pipeline { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; padding-top: 26px; }
 .eic-pipeline > article { min-width: 0; }

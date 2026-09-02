@@ -76,6 +76,15 @@ function groupStatus(rows: EicAdministrativeRow[], labelKey: string, valueKey: s
   return [...groups].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
 }
 
+type RankingColumnKey = "puesto" | "area" | "cursos" | "inversion";
+
+const rankingColumns: Array<{ key: RankingColumnKey; label: string; numeric?: boolean }> = [
+  { key: "puesto", label: "Puesto" },
+  { key: "area", label: "Área" },
+  { key: "cursos", label: "Cursos", numeric: true },
+  { key: "inversion", label: "Inversión actual", numeric: true },
+];
+
 export default function EicStatusReport({
   dashboard,
 }: {
@@ -89,7 +98,10 @@ export default function EicStatusReport({
   const [initiativeStatus, setInitiativeStatus] = useState("all");
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [authorizedNav, setAuthorizedNav] = useState({ back: false, forward: true });
+  const [rankingColumn, setRankingColumn] = useState<RankingColumnKey>("puesto");
+  const [rankingOptionalSlots, setRankingOptionalSlots] = useState(4);
   const authorizedWindowRef = useRef<HTMLDivElement>(null);
+  const rankingTableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -125,6 +137,19 @@ export default function EicStatusReport({
     observer.observe(node);
     return () => observer.disconnect();
   }, [cLevel, loading, views]);
+
+  useEffect(() => {
+    const node = rankingTableRef.current;
+    if (!node || loading) return;
+    const sync = () => {
+      const width = node.clientWidth;
+      setRankingOptionalSlots(width >= 1020 ? 4 : width >= 820 ? 3 : width >= 650 ? 2 : 1);
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loading, views.collaborator_ranking]);
 
   const moveAuthorizedPlan = (direction: -1 | 1) => {
     const node = authorizedWindowRef.current;
@@ -168,6 +193,18 @@ export default function EicStatusReport({
   const collaboratorRanking = useMemo(() => (views.collaborator_ranking ?? [])
     .filter(inScope)
     .sort((a, b) => number(b, "inversion_actual_mxn") - number(a, "inversion_actual_mxn")), [views.collaborator_ranking, inScope]);
+  const rankingFixedColumns = rankingColumns.slice(0, Math.max(0, rankingOptionalSlots - 1));
+  const rankingSelectableColumns = rankingColumns.slice(Math.max(0, rankingOptionalSlots - 1));
+  const effectiveRankingColumn = rankingSelectableColumns.some((column) => column.key === rankingColumn)
+    ? rankingColumn
+    : rankingSelectableColumns[0]?.key ?? "inversion";
+  const rankingVisibleColumns = [
+    ...rankingFixedColumns,
+    ...rankingSelectableColumns.filter((column) => column.key === effectiveRankingColumn),
+  ];
+  const rankingGridStyle = {
+    "--ranking-extra-columns": rankingVisibleColumns.length,
+  } as CSSProperties;
   const quotationStatus = useMemo(() => groupStatus(quotationRows, "estatus_cotizacion", "necesidades"), [quotationRows]);
   const trainingStatus = useMemo(() => groupStatus(trainingRows, "estatus_grupo", "grupos"), [trainingRows]);
   const paymentStatus = useMemo(() => groupStatus(paymentRows, "estatus_pago", "movimientos"), [paymentRows]);
@@ -344,16 +381,27 @@ export default function EicStatusReport({
 
       <section className="eic-section">
         <header className="eic-section-heading"><div><span>Ranking de colaboradores con mayor inversión en cursos</span><small>Inversión individual acumulada por participante dentro de la selección</small></div><b>{collaboratorRanking.length.toLocaleString("es-MX")} colaboradores</b></header>
-        {collaboratorRanking.length ? <div className="eic-ranking-table">
-          <div className="eic-ranking-head"><span>No.</span><span>No. colaborador</span><span>Colaborador</span><span>Puesto</span><span>Área</span><span>Cursos</span><span>Inversión actual</span></div>
-          {collaboratorRanking.slice(0, 10).map((row, index) => <div className="eic-ranking-row" key={`${text(row, "numero_colaborador")}-${text(row, "direccion_c_level")}`}>
+        {collaboratorRanking.length ? <div ref={rankingTableRef} className="eic-ranking-table">
+          <div className="eic-ranking-head" style={rankingGridStyle}>
+            <span>No.</span><span>No. colaborador</span><span>Colaborador</span>
+            {rankingVisibleColumns.map((column) => column.key === effectiveRankingColumn && rankingSelectableColumns.length > 1
+              ? <label className={`eic-ranking-column-picker${column.numeric ? " is-number" : ""}`} key="ranking-column-picker">
+                <select value={effectiveRankingColumn} onChange={(event) => setRankingColumn(event.target.value as RankingColumnKey)} aria-label="Cambiar columna visible del ranking">
+                  {rankingSelectableColumns.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+                </select>
+              </label>
+              : <span className={column.numeric ? "is-number" : undefined} key={column.key}>{column.label}</span>)}
+          </div>
+          {collaboratorRanking.slice(0, 10).map((row, index) => <div className="eic-ranking-row" style={rankingGridStyle} key={`${text(row, "numero_colaborador")}-${text(row, "direccion_c_level")}`}>
             <span>{index + 1}.</span>
             <span>{text(row, "numero_colaborador")}</span>
-            <strong>{text(row, "colaborador")}</strong>
-            <span>{text(row, "puesto")}</span>
-            <span>{text(row, "direccion_c_level")}</span>
-            <span>{number(row, "cursos").toLocaleString("es-MX")}</span>
-            <strong>{money(number(row, "inversion_actual_mxn"))}</strong>
+            <strong title={text(row, "colaborador")}>{text(row, "colaborador")}</strong>
+            {rankingVisibleColumns.map((column) => {
+              if (column.key === "puesto") return <span title={text(row, "puesto")} key={column.key}>{text(row, "puesto")}</span>;
+              if (column.key === "area") return <span title={text(row, "direccion_c_level")} key={column.key}>{text(row, "direccion_c_level")}</span>;
+              if (column.key === "cursos") return <span className="is-number" key={column.key}>{number(row, "cursos").toLocaleString("es-MX")}</span>;
+              return <strong className="is-number" key={column.key}>{money(number(row, "inversion_actual_mxn"))}</strong>;
+            })}
           </div>)}
           {collaboratorRanking.length > 10 && <p className="eic-ranking-foot">Mostrando los 10 colaboradores con mayor inversión de {collaboratorRanking.length.toLocaleString("es-MX")}.</p>}
         </div> : <div className="eic-ranking-placeholder"><span>Sin participantes identificables</span><p>La selección actual no incluye el detalle de número, nombre y puesto necesario para construir el ranking.</p></div>}
