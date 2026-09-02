@@ -165,6 +165,9 @@ export default function EicStatusReport({
   const trainingRows = useMemo(() => (views.training_status ?? []).filter(inScope), [views.training_status, inScope]);
   const paymentRows = useMemo(() => (views.payment_status ?? []).filter(inScope), [views.payment_status, inScope]);
   const trainingGroups = useMemo(() => (views.training_groups ?? []).filter(inScope), [views.training_groups, inScope]);
+  const collaboratorRanking = useMemo(() => (views.collaborator_ranking ?? [])
+    .filter(inScope)
+    .sort((a, b) => number(b, "inversion_actual_mxn") - number(a, "inversion_actual_mxn")), [views.collaborator_ranking, inScope]);
   const quotationStatus = useMemo(() => groupStatus(quotationRows, "estatus_cotizacion", "necesidades"), [quotationRows]);
   const trainingStatus = useMemo(() => groupStatus(trainingRows, "estatus_grupo", "grupos"), [trainingRows]);
   const paymentStatus = useMemo(() => groupStatus(paymentRows, "estatus_pago", "movimientos"), [paymentRows]);
@@ -218,7 +221,7 @@ export default function EicStatusReport({
     certifications: optionalSum(filteredDirections, "certificaciones_plan"),
     memberships: optionalSum(filteredDirections, "membresias_plan"),
     subscriptions: optionalSum(filteredDirections, "suscripciones_plan"),
-    projectedPeople: operational.projectedPeople,
+    projectedPeople: optionalSum(filteredDirections, "pax_proyectados_tablero") ?? operational.projectedPeople,
   }), [filteredDirections, operational.projectedPeople]);
 
   const clusterDistribution = useMemo(() => {
@@ -340,8 +343,20 @@ export default function EicStatusReport({
       </section>
 
       <section className="eic-section">
-        <header className="eic-section-heading"><div><span>Ranking de colaboradores con mayor inversión en cursos</span><small>Inversión acumulada por participante dentro de la selección</small></div></header>
-        <div className="eic-ranking-placeholder"><span>Datos de participantes pendientes</span><p>La hoja ya está preparada. El ranking se activará al publicar desde el SQL el número de colaborador, nombre, puesto y la inversión individual.</p></div>
+        <header className="eic-section-heading"><div><span>Ranking de colaboradores con mayor inversión en cursos</span><small>Inversión individual acumulada por participante dentro de la selección</small></div><b>{collaboratorRanking.length.toLocaleString("es-MX")} colaboradores</b></header>
+        {collaboratorRanking.length ? <div className="eic-ranking-table">
+          <div className="eic-ranking-head"><span>No.</span><span>No. colaborador</span><span>Colaborador</span><span>Puesto</span><span>Área</span><span>Cursos</span><span>Inversión actual</span></div>
+          {collaboratorRanking.slice(0, 10).map((row, index) => <div className="eic-ranking-row" key={`${text(row, "numero_colaborador")}-${text(row, "direccion_c_level")}`}>
+            <span>{index + 1}.</span>
+            <span>{text(row, "numero_colaborador")}</span>
+            <strong>{text(row, "colaborador")}</strong>
+            <span>{text(row, "puesto")}</span>
+            <span>{text(row, "direccion_c_level")}</span>
+            <span>{number(row, "cursos").toLocaleString("es-MX")}</span>
+            <strong>{money(number(row, "inversion_actual_mxn"))}</strong>
+          </div>)}
+          {collaboratorRanking.length > 10 && <p className="eic-ranking-foot">Mostrando los 10 colaboradores con mayor inversión de {collaboratorRanking.length.toLocaleString("es-MX")}.</p>}
+        </div> : <div className="eic-ranking-placeholder"><span>Sin participantes identificables</span><p>La selección actual no incluye el detalle de número, nombre y puesto necesario para construir el ranking.</p></div>}
       </section>
 
       <section className="eic-section">
