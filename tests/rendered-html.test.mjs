@@ -12,13 +12,31 @@ async function render() {
   );
 }
 
-test("renders the DataStore report library", async () => {
+test("renders the Macintosh Studio report library", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /<title>DataStore · Capacitación<\/title>/i);
+  assert.match(html, /<title>Macintosh Studio · Reportes<\/title>/i);
   assert.match(html, /Todos los reportes/);
   assert.match(html, /Buscar un reporte/);
   assert.match(html, /Universidad Corporativa Coppel/);
   assert.doesNotMatch(html, /codex-preview/);
+});
+
+test("renders the Macintosh Studio editor", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("studio-test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+  const response = await worker.fetch(
+    new Request("http://localhost/studio", { headers: { accept: "text/html" } }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Studio · Macintosh Studio/);
+  assert.match(html, /header-section-title[^>]*>Studio</);
+  assert.match(html, /Todos los reportes/);
+  assert.match(html, /Buscar un reporte/);
+  assert.doesNotMatch(html, /Abrir plantilla/);
 });

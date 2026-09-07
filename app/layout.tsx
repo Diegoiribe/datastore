@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DataStore · Capacitación",
-  description: "Tablero de avance y pendientes de capacitación.",
+  title: "Macintosh Studio · Reportes",
+  description: "Consulta, edita y compone reportes en Macintosh Studio.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

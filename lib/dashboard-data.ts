@@ -107,16 +107,20 @@ export type EicAdministrativeViews = Record<string, EicAdministrativeRow[]>;
 
 const pendingDashboardCache = new Map<string, Promise<PendingRow[]>>();
 const detailDashboardCache = new Map<string, Promise<SatisfactionComment[]>>();
+const browserUsesTunnel = typeof window !== "undefined"
+  && !["localhost", "127.0.0.1"].includes(window.location.hostname);
 const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_RUNSQL_API_URL ?? "http://localhost:8000"
+  browserUsesTunnel
+    ? "/api/macintosh"
+    : process.env.NEXT_PUBLIC_MACINTOSH_API_URL ?? "http://localhost:8010"
 ).replace(/\/$/, "");
 
-async function requestJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store" });
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store", ...init });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(
-      String(payload.detail ?? `RunSQL respondió ${response.status}.`),
+      String(payload.detail ?? `Macintosh respondió ${response.status}.`),
     );
   }
   return response.json() as Promise<T>;
@@ -188,5 +192,28 @@ export function loadDashboardDetails(dashboard: CategoryDashboard) {
 export function loadAdministrativeViews(dashboard: CategoryDashboard) {
   return requestJson<EicAdministrativeViews>(
     `/api/dashboard/${encodeURIComponent(dashboard.period)}/${encodeURIComponent(dashboard.category)}/views`,
+  );
+}
+
+export type StudioReportCopy = {
+  reportKey: string;
+  fields: Record<string, string>;
+  updatedAt: string | null;
+};
+
+export function loadStudioReportCopy(reportKey: string) {
+  return requestJson<StudioReportCopy>(
+    `/api/studio/reports/${encodeURIComponent(reportKey)}/copy`,
+  );
+}
+
+export function saveStudioReportCopy(reportKey: string, fields: Record<string, string>) {
+  return requestJson<StudioReportCopy>(
+    `/api/studio/reports/${encodeURIComponent(reportKey)}/copy`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fields }),
+    },
   );
 }

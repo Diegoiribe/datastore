@@ -1,5 +1,5 @@
 {
-  "name": "site-creator-vinext-starter",
+  "name": "macintosh-studio",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "vinext dev --port 5175",
+    "studio:share": "node scripts/share-studio.mjs",
     "build": "vinext build",
     "start": "vinext start",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
@@ -15,7 +16,6 @@
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
-    "firebase": "^12.18.0",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
