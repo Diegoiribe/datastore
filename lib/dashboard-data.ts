@@ -100,6 +100,7 @@ export type CategoryDashboard = {
   scoreFiveResponses: number;
   npsScaleStatus: string;
   publicationRevision: number;
+  administrativeViews?: EicAdministrativeViews;
 };
 
 export type EicAdministrativeRow = Record<string, string | number | boolean | null>;
@@ -107,16 +108,28 @@ export type EicAdministrativeViews = Record<string, EicAdministrativeRow[]>;
 
 const pendingDashboardCache = new Map<string, Promise<PendingRow[]>>();
 const detailDashboardCache = new Map<string, Promise<SatisfactionComment[]>>();
-const browserUsesTunnel = typeof window !== "undefined"
-  && !["localhost", "127.0.0.1"].includes(window.location.hostname);
-const API_BASE_URL = (
-  browserUsesTunnel
-    ? "/api/macintosh"
-    : process.env.NEXT_PUBLIC_MACINTOSH_API_URL ?? "http://localhost:8010"
-).replace(/\/$/, "");
+function studioShareToken() {
+  return typeof window === "undefined"
+    ? ""
+    : new URLSearchParams(window.location.search).get("share") ?? "";
+}
+
+function apiBaseUrl() {
+  if (typeof window === "undefined") return process.env.NEXT_PUBLIC_MACINTOSH_API_URL ?? "http://localhost:8010";
+  if (studioShareToken()) return "";
+  const remote = !["localhost", "127.0.0.1"].includes(window.location.hostname);
+  return remote ? "/api/macintosh" : process.env.NEXT_PUBLIC_MACINTOSH_API_URL ?? "http://localhost:8010";
+}
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store", ...init });
+  const headers = new Headers(init?.headers);
+  const shareToken = studioShareToken();
+  if (shareToken) headers.set("Authorization", `Bearer ${shareToken}`);
+  const response = await fetch(`${apiBaseUrl().replace(/\/$/, "")}${path}`, {
+    cache: "no-store",
+    ...init,
+    headers,
+  });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(
@@ -190,6 +203,7 @@ export function loadDashboardDetails(dashboard: CategoryDashboard) {
 }
 
 export function loadAdministrativeViews(dashboard: CategoryDashboard) {
+  if (dashboard.administrativeViews) return Promise.resolve(dashboard.administrativeViews);
   return requestJson<EicAdministrativeViews>(
     `/api/dashboard/${encodeURIComponent(dashboard.period)}/${encodeURIComponent(dashboard.category)}/views`,
   );
@@ -200,6 +214,28 @@ export type StudioReportCopy = {
   fields: Record<string, string>;
   updatedAt: string | null;
 };
+
+export type StudioShareSession = {
+  scope: "all" | "tienda" | "staff" | "cobranza" | "especializada";
+  allowedReportKeys: string[];
+  expiresAt: string;
+};
+
+export type StudioComment = {
+  id: string;
+  text: string;
+  anchor: "sheet" | "intro" | "metrics" | "chart" | "ranking" | "courses" | "budget" | "authorized" | "distribution" | "categories" | "flow" | "areas" | "initiatives";
+  x: number;
+  y: number;
+  coordinateSpace: "sheet" | "block";
+  createdAt: string;
+  completed: boolean;
+  completedAt: string;
+};
+
+export function loadStudioShareSession() {
+  return requestJson<StudioShareSession>("/api/studio/share/session");
+}
 
 export function loadStudioReportCopy(reportKey: string) {
   return requestJson<StudioReportCopy>(
@@ -214,6 +250,48 @@ export function saveStudioReportCopy(reportKey: string, fields: Record<string, s
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fields }),
+    },
+  );
+}
+
+export function loadStudioComments(reportKey: string) {
+  return requestJson<StudioComment[]>(
+    `/api/studio/reports/${encodeURIComponent(reportKey)}/comments`,
+  );
+}
+
+export function createStudioComment(
+  reportKey: string,
+  comment: Pick<StudioComment, "text" | "anchor" | "x" | "y" | "coordinateSpace">,
+) {
+  return requestJson<StudioComment>(
+    `/api/studio/reports/${encodeURIComponent(reportKey)}/comments`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(comment),
+    },
+  );
+}
+
+export function completeStudioComment(reportKey: string, id: string) {
+  return requestJson<StudioComment>(
+    `/api/studio/reports/${encodeURIComponent(reportKey)}/comments`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    },
+  );
+}
+
+export function deleteStudioComment(reportKey: string, id: string) {
+  return requestJson<{ id: string; deleted: boolean }>(
+    `/api/studio/reports/${encodeURIComponent(reportKey)}/comments`,
+    {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
     },
   );
 }

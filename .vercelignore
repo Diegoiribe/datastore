@@ -1,0 +1,6 @@
+.next
+.vinext
+dist
+outputs
+node_modules
+*.log

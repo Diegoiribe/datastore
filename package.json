@@ -6,16 +6,19 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vinext dev --port 5175",
-    "studio:share": "node scripts/share-studio.mjs",
-    "build": "vinext build",
-    "start": "vinext start",
+    "dev": "next dev --port 5175",
+    "studio:share:ngrok": "node scripts/share-studio.mjs",
+    "deploy": "vercel --prod",
+    "build": "next build",
+    "start": "next start --port 5175",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "deploy:preview": "vercel"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
+    "firebase-admin": "13.6.0",
+    "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
@@ -40,6 +43,7 @@
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.59.3",
+    "vercel": "^59.11.7",
     "vinext": "1.0.0-beta.2",
     "vite": "8.0.13",
     "wrangler": "4.92.0"

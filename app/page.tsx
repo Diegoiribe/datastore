@@ -1,21 +1,27 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
 import {
   CategoryDashboard,
   MetricRow,
   PendingRow,
   PeriodSummary,
   SatisfactionComment,
+  StudioComment,
+  completeStudioComment,
+  createStudioComment,
+  deleteStudioComment,
   listCategories,
   loadCategoryDashboard,
   loadDashboardDetails,
   loadPendingSection,
   loadStudioReportCopy,
+  loadStudioComments,
+  loadStudioShareSession,
   saveStudioReportCopy,
 } from "../lib/dashboard-data";
 import SatisfactionReport from "./SatisfactionReport";
-import EicStatusReport from "./EicStatusReport";
+import EicStatusReport, { eicBlockLabels, eicDefaultBlockOrder, type EicBlockKey } from "./EicStatusReport";
 import PopupFilter, { useDelayedPanelClose } from "./ToolbarPopupFilter";
 import { loadStudioDemoDashboard, studioDemoCategories, studioDemoPendingRows } from "../lib/studio-demo-data";
 
@@ -60,6 +66,10 @@ function reportFamily(category: CategoryOption) {
   return { label: "Avance", description: "Cumplimiento, asignaciones y cursos pendientes" };
 }
 
+function studioDocumentKeyFor(category: CategoryOption | undefined) {
+  return category?.collectionKey || category?.key || "reporte";
+}
+
 function reportTone(key: string) {
   const preferred: Record<string, string> = {
     almacenista: "cobalt", asesor: "forest", cajero: "coral", cobranza: "ink",
@@ -88,7 +98,8 @@ const ReportCover = memo(function ReportCover({ category, compact = false }: { c
     tienda: "/report-covers/asesor-v1.png",
   }[category.key] ?? null;
   const artwork = compact && tiendaChapterKeys.includes(category.key) ? null : coverArtwork;
-  return <span className={`report-cover ${compact ? "compact " : ""}${artwork ? `has-artwork artwork-${category.key}` : `tone-${reportTone(category.key)}`}`} style={artwork ? { backgroundImage: `url(${artwork})` } : undefined} aria-hidden="true">
+  const longTitle = category.label.length > 22;
+  return <span className={`report-cover ${compact ? "compact " : ""}${longTitle ? "long-title " : ""}${artwork ? `has-artwork artwork-${category.key}` : `tone-${reportTone(category.key)}`}`} style={artwork ? { backgroundImage: `url(${artwork})` } : undefined} aria-hidden="true">
     <span className="cover-rule" />
     <small>{family.label}</small>
     <strong>{category.label}</strong>
@@ -98,10 +109,19 @@ const ReportCover = memo(function ReportCover({ category, compact = false }: { c
 });
 
 function CollectionBookCover({ category, chapters, compact = false }: { category: CategoryOption; chapters: CategoryOption[]; compact?: boolean }) {
+  const visibleTabs = compact
+    ? chapters.slice(0, 5).map((chapter, index) => ({ key: chapter.key, label: String(index + 1).padStart(2, "0") }))
+    : chapters.length > 7
+      ? [
+          ...chapters.slice(0, 5).map((chapter, index) => ({ key: chapter.key, label: String(index + 1).padStart(2, "0") })),
+          { key: "overflow", label: "…" },
+          { key: "total", label: String(chapters.length).padStart(2, "0") },
+        ]
+      : chapters.map((chapter, index) => ({ key: chapter.key, label: String(index + 1).padStart(2, "0") }));
   return <span className={compact ? "tienda-book-cover compact" : "tienda-book-cover"}>
     <ReportCover category={category} compact={compact} />
-    <span className="book-index-tabs" aria-hidden="true">
-      {chapters.map((chapter, index) => <i key={chapter.key} style={{ "--tab-color": collectionTabColors[index % collectionTabColors.length] } as CSSProperties}>{String(index + 1).padStart(2, "0")}</i>)}
+    <span className="book-index-tabs" aria-hidden="true" data-visible-tabs={visibleTabs.length} data-total-chapters={chapters.length}>
+      {visibleTabs.map((tab, index) => <i key={tab.key} style={{ "--tab-color": collectionTabColors[index % collectionTabColors.length] } as CSSProperties}>{tab.label}</i>)}
     </span>
   </span>;
 }
@@ -203,6 +223,8 @@ function PositionFilterMenu({ open, positions, options, onOpenChange, onToggle }
 }
 
 type StudioBlockKey = "intro" | "metrics" | "chart" | "ranking" | "courses";
+type LayoutBlockKey = StudioBlockKey | EicBlockKey;
+type StudioCommentComposer = Pick<StudioComment, "anchor" | "x" | "y" | "coordinateSpace"> & { sheetX: number; sheetY: number };
 const studioDraftsStorageKey = "macintosh-studio:report-copy:v1";
 const studioDefaultBlockOrder: StudioBlockKey[] = ["intro", "metrics", "chart", "ranking", "courses"];
 
@@ -225,15 +247,16 @@ function StudioActionIcon({ name }: { name: "up" | "down" | "lock" | "unlock" })
 }
 
 function StudioBlockList({ order, hidden, selected, onSelect, onMove, onToggle, onDragStart, onDrop }: {
-  order: StudioBlockKey[];
-  hidden: StudioBlockKey[];
-  selected: StudioBlockKey;
-  onSelect(key: StudioBlockKey): void;
-  onMove(key: StudioBlockKey, direction: -1 | 1): void;
-  onToggle(key: StudioBlockKey): void;
-  onDragStart(key: StudioBlockKey): void;
-  onDrop(key: StudioBlockKey): void;
+  order: LayoutBlockKey[];
+  hidden: LayoutBlockKey[];
+  selected: LayoutBlockKey;
+  onSelect(key: LayoutBlockKey): void;
+  onMove(key: LayoutBlockKey, direction: -1 | 1): void;
+  onToggle(key: LayoutBlockKey): void;
+  onDragStart(key: LayoutBlockKey): void;
+  onDrop(key: LayoutBlockKey): void;
 }) {
+  const labels: Record<string, string> = order.length === eicDefaultBlockOrder.length ? eicBlockLabels : studioBlockLabels;
   return <ol className="studio-block-list" aria-label="Secciones editables del reporte">
     {order.map((key, index) => <li
       key={key}
@@ -246,11 +269,11 @@ function StudioBlockList({ order, hidden, selected, onSelect, onMove, onToggle, 
       onDrop={() => onDrop(key)}
     >
       <span className="studio-drag-handle" title="Arrastra para mover" aria-hidden="true">⠿</span>
-      <button type="button" className="studio-block-name" onClick={() => onSelect(key)}><small>{String(index + 1).padStart(2, "0")}</small><strong>{studioBlockLabels[key]}</strong></button>
+      <button type="button" className="studio-block-name" onClick={() => onSelect(key)}><small>{String(index + 1).padStart(2, "0")}</small><strong>{labels[key]}</strong></button>
       <span className="studio-block-actions">
-        <button type="button" onClick={() => onMove(key, -1)} aria-label={`Subir ${studioBlockLabels[key]}`} title="Subir sección"><StudioActionIcon name="up" /></button>
-        <button type="button" onClick={() => onMove(key, 1)} aria-label={`Bajar ${studioBlockLabels[key]}`} title="Bajar sección"><StudioActionIcon name="down" /></button>
-        <button type="button" className="studio-lock-button" onClick={() => onToggle(key)} aria-label={`${hidden.includes(key) ? "Mostrar" : "Ocultar"} ${studioBlockLabels[key]}`} title={hidden.includes(key) ? "Mostrar sección" : "Ocultar sección"}><StudioActionIcon name={hidden.includes(key) ? "unlock" : "lock"} /></button>
+        <button type="button" onClick={() => onMove(key, -1)} aria-label={`Subir ${labels[key]}`} title="Subir sección"><StudioActionIcon name="up" /></button>
+        <button type="button" onClick={() => onMove(key, 1)} aria-label={`Bajar ${labels[key]}`} title="Bajar sección"><StudioActionIcon name="down" /></button>
+        <button type="button" className="studio-lock-button" onClick={() => onToggle(key)} aria-label={`${hidden.includes(key) ? "Mostrar" : "Ocultar"} ${labels[key]}`} title={hidden.includes(key) ? "Mostrar sección" : "Ocultar sección"}><StudioActionIcon name={hidden.includes(key) ? "unlock" : "lock"} /></button>
       </span>
     </li>)}
   </ol>;
@@ -309,16 +332,26 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [usingDemo, setUsingDemo] = useState(true);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
-  const [studioBlockOrder, setStudioBlockOrder] = useState<StudioBlockKey[]>(studioDefaultBlockOrder);
-  const [studioHiddenBlocks, setStudioHiddenBlocks] = useState<StudioBlockKey[]>([]);
-  const [studioSelectedBlock, setStudioSelectedBlock] = useState<StudioBlockKey>("intro");
-  const [studioDraggedBlock, setStudioDraggedBlock] = useState<StudioBlockKey | null>(null);
+  const [studioBlockOrder, setStudioBlockOrder] = useState<LayoutBlockKey[]>(studioDefaultBlockOrder);
+  const [studioHiddenBlocks, setStudioHiddenBlocks] = useState<LayoutBlockKey[]>([]);
+  const [studioSelectedBlock, setStudioSelectedBlock] = useState<LayoutBlockKey>("intro");
+  const [studioDraggedBlock, setStudioDraggedBlock] = useState<LayoutBlockKey | null>(null);
   const [studioDrafts, setStudioDrafts] = useState<Record<string, string>>({});
   const [studioSavedDrafts, setStudioSavedDrafts] = useState<Record<string, string>>({});
   const [studioSaveStatus, setStudioSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [studioAccessError, setStudioAccessError] = useState("");
+  const [studioComments, setStudioComments] = useState<StudioComment[]>([]);
+  const [studioCommentPositions, setStudioCommentPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [studioCommentComposer, setStudioCommentComposer] = useState<StudioCommentComposer | null>(null);
+  const [studioCommentText, setStudioCommentText] = useState("");
+  const [studioCommentStatus, setStudioCommentStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [activeStudioComment, setActiveStudioComment] = useState<string | null>(null);
+  const [studioCommentAction, setStudioCommentAction] = useState<string | null>(null);
   const librarySearchRef = useRef<HTMLInputElement>(null);
   const reportScrollRef = useRef<HTMLDivElement>(null);
   const reportSheetRef = useRef<HTMLElement>(null);
+  const studioCommentInputRef = useRef<HTMLTextAreaElement>(null);
+  const legacyCommentOffsetsRef = useRef<Record<string, { x: number; y: number }>>({});
   const pendingReportScrollRef = useRef<number | null>(null);
   const period = `${year}-${month.padStart(2, "0")}`;
   const requestKey = `${selectedCategories.join("|")}@${period}`;
@@ -341,6 +374,34 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
+
+  useEffect(() => {
+    if (!studioMode) return;
+    const isRemote = !["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const token = new URLSearchParams(window.location.search).get("share") ?? "";
+    if (!isRemote) return;
+    if (!token) {
+      // The remote URL is an external input; synchronize its access state after mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStudioAccessError("Este enlace de Macintosh Studio no es válido o ya no está disponible.");
+      return;
+    }
+    const applyScope = (scope: string) => {
+      const scopedCollection = scope === "especializada" ? "planes_de_capacitacion" : scope;
+      const scoped = scope === "all"
+        ? studioDemoCategories
+        : studioDemoCategories.filter((category) => category.collectionKey === scopedCollection);
+      setCategories(scoped);
+      setSelectedCategories((current) => current.filter((key) => scoped.some((category) => category.key === key)));
+      setOpenBook(null);
+      setExpandedBook(null);
+    };
+    const hintedScope = token.split(".", 1)[0];
+    if (["all", "tienda", "staff", "cobranza", "especializada"].includes(hintedScope)) applyScope(hintedScope);
+    loadStudioShareSession()
+      .then((session) => applyScope(session.scope))
+      .catch(() => setStudioAccessError("Este enlace de Macintosh Studio venció, fue revocado o no es válido."));
+  }, [studioMode]);
 
   useEffect(() => {
     if (studioMode) return;
@@ -370,7 +431,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
   }, [studioMode]);
 
   useEffect(() => {
-    const focusSearch = (event: KeyboardEvent) => {
+    const focusSearch = (event: globalThis.KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase("es") === "k") {
         event.preventDefault();
         librarySearchRef.current?.focus();
@@ -488,21 +549,18 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     const standalone = categories.filter((category) => !chapterKeys.has(category.key));
     return [
       ...(tiendaChapters.length ? [tiendaCategory] : []),
-      staffCollectionCategory,
+      ...(staffChapters.length ? [staffCollectionCategory] : []),
       ...(trainingPlanChapters.length ? [trainingPlansCollectionCategory] : []),
       ...standalone,
     ];
-  }, [categories, chapterKeys, tiendaChapters.length, trainingPlanChapters.length]);
+  }, [categories, chapterKeys, staffChapters.length, tiendaChapters.length, trainingPlanChapters.length]);
   const collectionChapters = useCallback((key: string) => {
     if (key === "tienda") return tiendaChapters;
     if (key === "staff_collection") return staffChapters;
     if (key === "training_plans_collection") return trainingPlanChapters;
     return [];
   }, [staffChapters, tiendaChapters, trainingPlanChapters]);
-  const displayCategoryLabel = useCallback(
-    (category: CategoryOption) => studioDrafts[`${category.key}:intro.title`] ?? category.label,
-    [studioDrafts],
-  );
+  const displayCategoryLabel = useCallback((category: CategoryOption) => category.label, []);
   const displayCategory = useCallback(
     (category: CategoryOption) => {
       const label = displayCategoryLabel(category);
@@ -528,16 +586,18 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     [categories, selectedCategories],
   );
   const selectedCategory = selectedReportOptions[0] ?? categories[0];
+  const selectedStudioDocumentKey = studioDocumentKeyFor(selectedCategory);
   useEffect(() => {
     let active = true;
-    void Promise.allSettled(categories.map((category) => loadStudioReportCopy(category.key)))
+    const documentKeys = [...new Set(categories.map(studioDocumentKeyFor))];
+    void Promise.allSettled(documentKeys.map(loadStudioReportCopy))
       .then((results) => {
         if (!active) return;
         const remote: Record<string, string> = {};
         results.forEach((result, index) => {
           if (result.status !== "fulfilled") return;
           for (const [field, value] of Object.entries(result.value.fields)) {
-            remote[`${categories[index].key}:${field}`] = value;
+            remote[`${documentKeys[index]}:${field}`] = value;
           }
         });
         setStudioSavedDrafts(remote);
@@ -554,19 +614,80 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
   }, [categories]);
 
   useEffect(() => {
-    const reportKey = selectedCategory?.key;
-    if (!studioMode || !reportKey) return;
-    const order = (studioDrafts[`${reportKey}:layout.order`] ?? "").split(",")
-      .filter((key): key is StudioBlockKey => studioDefaultBlockOrder.includes(key as StudioBlockKey));
-    const validOrder = order.length === studioDefaultBlockOrder.length
-      && studioDefaultBlockOrder.every((key) => order.includes(key));
-    const hidden = (studioDrafts[`${reportKey}:layout.hidden`] ?? "").split(",")
-      .filter((key): key is StudioBlockKey => studioDefaultBlockOrder.includes(key as StudioBlockKey));
+    const reportKey = selectedStudioDocumentKey;
+    if (!reportKey) return;
+    const defaultOrder: LayoutBlockKey[] = reportKey === "planes_de_capacitacion" ? eicDefaultBlockOrder : studioDefaultBlockOrder;
+    const layoutSource = studioMode ? studioDrafts : studioSavedDrafts;
+    const order = (layoutSource[`${reportKey}:layout.order`] ?? "").split(",")
+      .filter((key): key is LayoutBlockKey => defaultOrder.includes(key as LayoutBlockKey));
+    const validOrder = order.length === defaultOrder.length
+      && defaultOrder.every((key) => order.includes(key));
+    const hidden = (layoutSource[`${reportKey}:layout.hidden`] ?? "").split(",")
+      .filter((key): key is LayoutBlockKey => defaultOrder.includes(key as LayoutBlockKey));
     // The active report owns a separate persisted layout.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStudioBlockOrder(validOrder ? order : studioDefaultBlockOrder);
+    setStudioBlockOrder(validOrder ? order : defaultOrder);
     setStudioHiddenBlocks(hidden);
-  }, [selectedCategory?.key, studioDrafts, studioMode]);
+    setStudioSelectedBlock((current) => defaultOrder.includes(current) ? current : defaultOrder[0]);
+  }, [selectedStudioDocumentKey, studioDrafts, studioMode, studioSavedDrafts]);
+
+  useEffect(() => {
+    if (!studioMode) return;
+    legacyCommentOffsetsRef.current = {};
+    let active = true;
+    void loadStudioComments(selectedStudioDocumentKey)
+      .then((comments) => { if (active) setStudioComments(comments); })
+      .catch(() => { if (active) setStudioComments([]); });
+    return () => { active = false; };
+  }, [selectedStudioDocumentKey, studioMode]);
+
+  useLayoutEffect(() => {
+    if (!studioMode || !reportSheetRef.current) return;
+    const sheet = reportSheetRef.current;
+    let animationFrame = 0;
+    const updatePositions = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        if (!sheet.clientWidth || !sheet.clientHeight) return;
+        const next: Record<string, { x: number; y: number }> = {};
+        for (const comment of studioComments) {
+          if (comment.anchor === "sheet") continue;
+          const anchorElement = Array.from(sheet.querySelectorAll<HTMLElement>("[data-studio-order-key]"))
+            .find((element) => element.dataset.studioOrderKey === comment.anchor);
+          if (!anchorElement) continue;
+          let anchorLeft = 0;
+          let anchorTop = 0;
+          let offsetNode: HTMLElement | null = anchorElement;
+          while (offsetNode && offsetNode !== sheet) {
+            anchorLeft += offsetNode.offsetLeft;
+            anchorTop += offsetNode.offsetTop;
+            offsetNode = offsetNode.offsetParent as HTMLElement | null;
+          }
+          if (offsetNode !== sheet || !anchorElement.offsetWidth || !anchorElement.offsetHeight) continue;
+          const legacyOffset = legacyCommentOffsetsRef.current[comment.id] ?? {
+            x: Math.max(0.05, Math.min(0.95, (comment.x * sheet.clientWidth - anchorLeft) / anchorElement.offsetWidth)),
+            y: Math.max(0.05, Math.min(0.95, (comment.y * sheet.clientHeight - anchorTop) / anchorElement.offsetHeight)),
+          };
+          if (comment.coordinateSpace !== "block") legacyCommentOffsetsRef.current[comment.id] = legacyOffset;
+          const blockOffset = comment.coordinateSpace === "block" ? comment : legacyOffset;
+          next[comment.id] = {
+            x: (anchorLeft + blockOffset.x * anchorElement.offsetWidth) / sheet.clientWidth,
+            y: (anchorTop + blockOffset.y * anchorElement.offsetHeight) / sheet.clientHeight,
+          };
+        }
+        setStudioCommentPositions(next);
+      });
+    };
+    updatePositions();
+    const observer = new ResizeObserver(updatePositions);
+    observer.observe(sheet);
+    window.addEventListener("resize", updatePositions);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+      window.removeEventListener("resize", updatePositions);
+    };
+  }, [selectedStudioDocumentKey, studioBlockOrder, studioComments, studioHiddenBlocks, studioMode]);
 
   const reportIsSurvey = selectedCategory?.key === "encuesta_de_satisfaccion";
   const reportIsEic = selectedReportOptions.length > 0 && selectedReportOptions.every((category) =>
@@ -651,6 +772,9 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     const nextReports = categories.filter((item) => nextSelection.includes(item.key));
     const latestPeriod = latestSharedPeriod(nextReports) ?? Object.keys(clickedCategory.history ?? {}).sort().at(-1);
     resetCategoryFilters();
+    setStudioCommentComposer(null);
+    setStudioCommentText("");
+    setStudioCommentStatus("idle");
     setReportQuery("");
     if (latestPeriod) {
       setYear(latestPeriod.slice(0, 4));
@@ -754,9 +878,11 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
   );
   const peopleSuggestions = visiblePending.slice(0, 8);
 
-  const selectedLabel = selectedReportOptions.length > 2
-    ? `${selectedReportOptions.length} reportes de ${reportFamily(selectedReportOptions[0]).label}`
-    : selectedReportOptions.map(displayCategoryLabel).join(" + ") || "Selecciona un reporte";
+  const selectedLabel = studioMode
+    ? selectedCategory?.collectionLabel || selectedCategory?.label || "Studio"
+    : selectedReportOptions.length > 2
+      ? `${selectedReportOptions.length} reportes de ${reportFamily(selectedReportOptions[0]).label}`
+      : selectedReportOptions.map(displayCategoryLabel).join(" + ") || "Selecciona un reporte";
   const syncState = reportLoading ? "loading" : studioMode ? "test" : usingDemo ? "empty" : "synced";
   const syncLabel = reportLoading ? "Preparando…" : studioMode ? "Datos de prueba" : usingDemo ? "Sin datos" : "Sincronizado";
   const syncTitle = reportLoading
@@ -773,8 +899,8 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
       : `Corte ${eicCutoffs[0]}`
     : tiendaPeriodReady ? period : "Selecciona periodo";
 
-  const studioCopy = (field: string, fallback: string) => studioDrafts[`${selectedCategory?.key ?? "reporte"}:${field}`] ?? fallback;
-  const selectedStudioPrefix = `${selectedCategory?.key ?? "reporte"}:`;
+  const studioCopy = (field: string, fallback: string) => (studioMode ? studioDrafts : studioSavedDrafts)[`${selectedStudioDocumentKey}:${field}`] ?? fallback;
+  const selectedStudioPrefix = `${selectedStudioDocumentKey}:`;
   const selectedStudioKeys = new Set([
     ...Object.keys(studioSavedDrafts),
     ...Object.keys(studioDrafts),
@@ -782,11 +908,11 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     `${selectedStudioPrefix}layout.hidden`,
   ]);
   const normalizedStudioValue = (source: Record<string, string>, key: string) => source[key]
-    ?? (key.endsWith(":layout.order") ? studioDefaultBlockOrder.join(",") : key.endsWith(":layout.hidden") ? "none" : undefined);
+    ?? (key.endsWith(":layout.order") ? (selectedStudioDocumentKey === "planes_de_capacitacion" ? eicDefaultBlockOrder : studioDefaultBlockOrder).join(",") : key.endsWith(":layout.hidden") ? "none" : undefined);
   const studioDirty = [...selectedStudioKeys].some((key) => key.startsWith(selectedStudioPrefix)
     && normalizedStudioValue(studioDrafts, key) !== normalizedStudioValue(studioSavedDrafts, key));
   const updateStudioDraft = (field: string, value: string) => {
-    const reportKey = selectedCategory?.key;
+    const reportKey = selectedStudioDocumentKey;
     if (!reportKey) return;
     setStudioDrafts((current) => {
       const next = { ...current, [`${reportKey}:${field}`]: value };
@@ -800,7 +926,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     updateStudioDraft(field, value);
   };
   const saveStudioChanges = async () => {
-    const reportKey = selectedCategory?.key;
+    const reportKey = selectedStudioDocumentKey;
     if (!reportKey || !studioDirty || studioSaveStatus === "saving") return;
     const prefix = `${reportKey}:`;
     const fields = Object.fromEntries(Object.entries(studioDrafts)
@@ -829,6 +955,72 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
       setStudioSaveStatus("error");
     }
   };
+  const openStudioCommentComposer = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!studioMode || !reportSheetRef.current) return;
+    if ((event.target as HTMLElement).closest(".studio-comment-composer")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const sheet = reportSheetRef.current;
+    const rectangle = sheet.getBoundingClientRect();
+    const target = event.target as HTMLElement;
+    const anchorElement = target.closest<HTMLElement>("[data-studio-order-key]");
+    const anchor = (anchorElement?.dataset.studioOrderKey ?? "sheet") as StudioComment["anchor"];
+    const anchorRectangle = anchorElement?.getBoundingClientRect() ?? rectangle;
+    const sheetX = Math.max(0.02, Math.min(0.98, (event.clientX - rectangle.left) / rectangle.width));
+    const sheetY = Math.max(0.01, Math.min(0.99, (event.clientY - rectangle.top) / rectangle.height));
+    setStudioCommentComposer({
+      anchor,
+      coordinateSpace: anchorElement ? "block" : "sheet",
+      x: Math.max(0.02, Math.min(0.98, (event.clientX - anchorRectangle.left) / anchorRectangle.width)),
+      y: Math.max(0.01, Math.min(0.99, (event.clientY - anchorRectangle.top) / anchorRectangle.height)),
+      sheetX,
+      sheetY,
+    });
+    setStudioCommentText("");
+    setStudioCommentStatus("idle");
+    window.requestAnimationFrame(() => studioCommentInputRef.current?.focus());
+  };
+  const submitStudioComment = async () => {
+    const text = studioCommentText.trim();
+    if (!studioCommentComposer || !text || studioCommentStatus === "saving") return;
+    setStudioCommentStatus("saving");
+    try {
+      const comment = await createStudioComment(selectedStudioDocumentKey, {
+        anchor: studioCommentComposer.anchor,
+        coordinateSpace: studioCommentComposer.coordinateSpace,
+        x: studioCommentComposer.x,
+        y: studioCommentComposer.y,
+        text,
+      });
+      setStudioComments((current) => [...current, comment]);
+      setStudioCommentComposer(null);
+      setStudioCommentText("");
+      setStudioCommentStatus("idle");
+    } catch {
+      setStudioCommentStatus("error");
+    }
+  };
+  const completeComment = async (comment: StudioComment) => {
+    if (comment.completed || studioCommentAction) return;
+    setStudioCommentAction(comment.id);
+    try {
+      const completed = await completeStudioComment(selectedStudioDocumentKey, comment.id);
+      setStudioComments((current) => current.map((item) => item.id === comment.id ? completed : item));
+    } finally {
+      setStudioCommentAction(null);
+    }
+  };
+  const removeComment = async (comment: StudioComment) => {
+    if (studioCommentAction) return;
+    setStudioCommentAction(comment.id);
+    try {
+      await deleteStudioComment(selectedStudioDocumentKey, comment.id);
+      setStudioComments((current) => current.filter((item) => item.id !== comment.id));
+      setActiveStudioComment(null);
+    } finally {
+      setStudioCommentAction(null);
+    }
+  };
   const studioOrder = (key: StudioBlockKey) => studioBlockOrder.indexOf(key) + 1;
   const studioBlockClass = (key: StudioBlockKey, base: string) => `${base}${studioMode ? " studio-editable-block" : ""}${studioMode && studioSelectedBlock === key ? " studio-block-selected" : ""}`;
   const studioSelectionProps = (key: StudioBlockKey) => studioMode ? {
@@ -853,7 +1045,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
       ], { duration: 480, easing: "cubic-bezier(.22,.78,.22,1)" });
     }));
   };
-  const moveStudioBlock = (key: StudioBlockKey, direction: -1 | 1) => {
+  const moveStudioBlock = (key: LayoutBlockKey, direction: -1 | 1) => {
     const animateReorder = prepareStudioReorderAnimation();
     const index = studioBlockOrder.indexOf(key);
     const target = index + direction;
@@ -864,7 +1056,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     updateStudioDraft("layout.order", next.join(","));
     animateReorder();
   };
-  const dropStudioBlock = (target: StudioBlockKey) => {
+  const dropStudioBlock = (target: LayoutBlockKey) => {
     if (!studioDraggedBlock || studioDraggedBlock === target) return;
     const animateReorder = prepareStudioReorderAnimation();
     const sourceIndex = studioBlockOrder.indexOf(studioDraggedBlock);
@@ -878,7 +1070,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     setStudioDraggedBlock(null);
     animateReorder();
   };
-  const toggleStudioBlock = (key: StudioBlockKey) => {
+  const toggleStudioBlock = (key: LayoutBlockKey) => {
     const next = studioHiddenBlocks.includes(key)
       ? studioHiddenBlocks.filter((item) => item !== key)
       : [...studioHiddenBlocks, key];
@@ -941,6 +1133,10 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  if (studioAccessError) {
+    return <main className="studio-access-denied" role="alert"><div><span>MACINTOSH STUDIO</span><h1>Enlace no disponible</h1><p>{studioAccessError}</p></div></main>;
+  }
+
   if (!selectedCategories.length && !openBook) {
     return <div className="site-page library-page">
       <header className="site-header library-header">
@@ -962,7 +1158,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
           const isCollection = category.key === "tienda" || category.key === "staff_collection" || category.key === "training_plans_collection";
           return <button className={isCollection ? "book-card collection" : "book-card"} key={category.key} onClick={() => selectLibraryReport(category.key)} style={{ animationDelay: `${index * 45}ms` }}>
             {isCollection ? <CollectionBookCover category={category} chapters={chapters} /> : <ReportCover category={displayCategory(category)} />}
-            <span className="book-card-copy"><span className="report-family-tag">{family.label}</span><strong>{displayCategoryLabel(category)}</strong><small>{family.description}</small></span>
+            <span className="book-card-copy"><span className="report-family-tag">{studioMode ? "Plantilla" : family.label}</span><strong>{displayCategoryLabel(category)}</strong><small>{studioMode ? "Composición compartida de la colección" : family.description}</small></span>
           </button>;
         })}</div> : <section className="library-empty"><strong>No encontramos ese reporte.</strong><span>Prueba con otro nombre o con una familia como “Avance” o “Experiencia”.</span></section>}
       </main>
@@ -1006,12 +1202,22 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
             const chapters = visibleCollectionChapters(category.key);
             const collectionKey = category.key === "tienda" ? "tienda" : category.key === "staff_collection" ? "staff" : category.key === "training_plans_collection" ? "training_plans" : null;
             if (collectionKey) return <div className="category-collection" key={category.key}>
-              <button className="category collection-category" onClick={() => setExpandedBook((current) => current === category.key ? null : category.key)} aria-expanded={expandedBook === category.key}>
+              <button className="category collection-category" onClick={() => {
+                const nextOpen = expandedBook === category.key ? null : category.key;
+                setExpandedBook(nextOpen);
+                if (studioMode && nextOpen) {
+                  const template = collectionChapters(category.key)[0];
+                  if (template) {
+                    setOpenBook(collectionKey);
+                    selectCategory(template.key);
+                  }
+                }
+              }} aria-expanded={expandedBook === category.key}>
                 <CollectionBookCover category={category} chapters={collectionChapters(category.key)} compact />
-                <span className="category-copy"><span>{category.label}</span><small>{collectionChapters(category.key).length} capítulos</small></span>
+                <span className="category-copy"><span>{category.label}</span><small>{studioMode ? "1 plantilla" : `${collectionChapters(category.key).length} capítulos`}</small></span>
               </button>
               <div className={expandedBook === category.key ? "chapter-subnotes open" : "chapter-subnotes"}>
-                {chapters.map((chapter, index) => <div className="studio-chapter-entry" key={chapter.key}>
+                {studioMode ? selectedCategories.some((key) => collectionChapters(category.key).some((chapter) => chapter.key === key)) && studioList : chapters.map((chapter, index) => <div className="studio-chapter-entry" key={chapter.key}>
                   <button
                     className={selectedCategories.includes(chapter.key) ? "category chapter-note active" : "category chapter-note"}
                     onClick={() => { setOpenBook(collectionKey); selectCategory(chapter.key); }}
@@ -1023,21 +1229,20 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
                     <span className="chapter-note-index">{String(index + 1).padStart(2, "0")}</span>
                     <span className="category-copy"><span>{displayCategoryLabel(chapter)}</span><small>Capítulo de {category.label}</small></span>
                   </button>
-                  {studioMode && selectedCategories.includes(chapter.key) && !reportIsSurvey && !showEicReport && studioList}
                 </div>)}
               </div>
             </div>;
             return <div className="studio-category-entry" key={category.key}><button
                 className={selectedCategories.includes(category.key) ? "category active" : "category"}
                 onClick={() => { setOpenBook(null); setExpandedBook(null); selectCategory(category.key); }}
-                onContextMenu={(event) => { event.preventDefault(); selectCategory(category.key, true); }}
+                onContextMenu={studioMode ? undefined : (event) => { event.preventDefault(); selectCategory(category.key, true); }}
                 aria-pressed={selectedCategories.includes(category.key)}
-                title="Clic izquierdo para cambiar · clic derecho para combinar"
+                title={studioMode ? "Seleccionar colección" : "Clic izquierdo para cambiar · clic derecho para combinar"}
               >
                 <ReportCover category={displayCategory(category)} compact />
-                <span className="category-copy"><span>{displayCategoryLabel(category)}</span><small>{reportFamily(category).label}</small></span>
+                <span className="category-copy"><span>{displayCategoryLabel(category)}</span><small>{studioMode ? "1 plantilla" : reportFamily(category).label}</small></span>
               </button>
-              {studioMode && selectedCategories.includes(category.key) && !reportIsSurvey && !showEicReport && studioList}</div>;
+              {studioMode && selectedCategories.includes(category.key) && !reportIsSurvey && studioList}</div>;
           })}
         </nav>
 
@@ -1045,7 +1250,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
 
       <section className="report-space" key={selectedCategories.join("|")}>
         <header className="topbar">
-          <div className="report-name"><ReportCover category={displayCategory(selectedCategory)} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {reportPeriodLabel}</small></span></div>
+          <div className="report-name"><ReportCover category={displayCategory(selectedCategory)} compact /><span><strong title={selectedLabel}>{selectedLabel}</strong><small>{studioMode ? "Plantilla de colección" : selectedReportOptions.length > 1 ? `Combinado · ${selectedReportOptions.length} reportes` : reportFamily(selectedCategory).label} · {reportPeriodLabel}</small></span></div>
           <div className="topbar-actions">
             <button type="button" className="reader-mode-toggle reader-mode-restore" onClick={() => setReaderMode(false)} aria-label="Mostrar navegación y restaurar tamaño" title="Mostrar navegación"><span className="pane-icon" aria-hidden="true" /></button>
             <span className={`status-pill ${syncState}`} title={syncTitle}>{syncLabel}</span>
@@ -1069,7 +1274,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
         </header>
 
         <div className="report-scroll" ref={reportScrollRef}>
-          <article className={`${reportLoading ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${reportIsSurvey ? " survey-themed" : ""}${showEicReport ? " eic-themed" : ""}`} ref={reportSheetRef} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : reportIsSurvey ? { "--survey-accent": satisfactionPalette.accent, "--survey-secondary": satisfactionPalette.secondary, "--survey-deep": satisfactionPalette.deep, "--survey-action": satisfactionPalette.accent } as CSSProperties : undefined}>
+          <article className={`${reportLoading ? "sheet is-loading" : "sheet is-ready"}${openBook === "tienda" ? " tienda-themed" : ""}${reportIsSurvey ? " survey-themed" : ""}${showEicReport ? " eic-themed" : ""}${studioMode ? " studio-comment-surface" : ""}`} ref={reportSheetRef} onContextMenu={studioMode ? openStudioCommentComposer : undefined} style={openBook === "tienda" ? { "--tienda-accent": institutionalPalette.accent, "--tienda-secondary": institutionalPalette.secondary, "--tienda-deep": institutionalPalette.deep, "--tienda-action": institutionalPalette.accent } as CSSProperties : reportIsSurvey ? { "--survey-accent": satisfactionPalette.accent, "--survey-secondary": satisfactionPalette.secondary, "--survey-deep": satisfactionPalette.deep, "--survey-action": satisfactionPalette.accent } as CSSProperties : undefined}>
             <header className={openBook === "tienda" ? "sheet-title tienda-letterhead" : reportIsSurvey ? "sheet-title tienda-letterhead survey-letterhead" : showEicReport ? "sheet-title tienda-letterhead eic-letterhead" : "sheet-title"}>
               {openBook === "tienda" && <div className="tienda-letterhead-top">
                 <div className="tienda-letterhead-logo"><img src="/coppel-universidad-logo-black-v2.png" alt="Coppel Universidad Corporativa · Academia de Ventas" /></div>
@@ -1083,7 +1288,7 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
               <div className="sheet-title-copy">{openBook !== "tienda" && !reportIsSurvey && !showEicReport && <span className="eyebrow">{peopleMode ? "CURSOS PENDIENTES" : "DOCUMENTO DE RESULTADOS"}</span>}<h2>{reportIsSurvey ? "Satisfacción" : showEicReport ? eicReportTitle : peopleMode ? "Detalle por colaborador" : "Reporte de capacitación"}</h2></div>
             </header>
 
-            {reportLoading ? <ReportSkeleton survey={reportIsSurvey} /> : <div className={studioMode && !activeSurvey && !activeEic && !peopleMode ? "report-content studio-report-content" : "report-content"}>
+            {reportLoading ? <ReportSkeleton survey={reportIsSurvey} /> : <div className={!activeSurvey && !activeEic && !peopleMode ? "report-content studio-report-content" : "report-content"}>
             {!activeSurvey && !activeEic && <div className="floating-toolbar-frame"><div className={peopleMode ? "sheet-toolbar people" : "sheet-toolbar"} aria-label="Filtros del reporte">
               {peopleMode ? (
                 <>
@@ -1124,32 +1329,32 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
               )}
             </div></div>}
 
-            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} details={surveyDetails} detailsError={surveyDetailsError} /> : activeEic ? <EicStatusReport key={`${activeEicDashboards.map((dashboard) => dashboard.category).join("+")}/${activeEic.period}`} dashboards={activeEicDashboards} /> : <>{(!studioMode || !studioHiddenBlocks.includes("intro")) && <section data-studio-order-key="intro" className={studioBlockClass("intro", "report-lead")} style={studioMode ? { order: studioOrder("intro") } : undefined} onClick={studioMode ? () => setStudioSelectedBlock("intro") : undefined} onKeyDown={studioMode ? (event) => { if (event.key === "Enter" || event.key === " ") setStudioSelectedBlock("intro"); } : undefined} role={studioMode ? "button" : undefined} tabIndex={studioMode ? 0 : undefined}>
-              <EditableCopy value={studioCopy("intro.title", selectedLabel)} as="h3" enabled={studioMode && !peopleMode} onChange={(value) => updateStudioCopy("intro.title", value)} />
+            {openBook === "tienda" && !tiendaPeriodReady ? <section className="filter-empty-state"><span>PERIODO REQUERIDO</span><h3>Selecciona Año y Mes</h3><p>El reporte permanecerá vacío hasta que definas el periodo que deseas consultar.</p></section> : activeSurvey ? <SatisfactionReport key={`${activeSurvey.category}/${activeSurvey.period}`} dashboard={activeSurvey} details={surveyDetails} detailsError={surveyDetailsError} /> : activeEic ? <EicStatusReport key={`${activeEicDashboards.map((dashboard) => dashboard.category).join("+")}/${activeEic.period}`} dashboards={activeEicDashboards} layoutOrder={studioBlockOrder as EicBlockKey[]} hiddenBlocks={studioHiddenBlocks as EicBlockKey[]} studioMode={studioMode} selectedBlock={studioSelectedBlock as EicBlockKey} onSelectBlock={setStudioSelectedBlock} copy={studioCopy} onCopyChange={updateStudioCopy} /> : <>{!studioHiddenBlocks.includes("intro") && <section data-studio-order-key="intro" className={studioBlockClass("intro", "report-lead")} style={{ order: studioOrder("intro") }} onClick={studioMode ? () => setStudioSelectedBlock("intro") : undefined} onKeyDown={studioMode ? (event) => { if (event.key === "Enter" || event.key === " ") setStudioSelectedBlock("intro"); } : undefined} role={studioMode ? "button" : undefined} tabIndex={studioMode ? 0 : undefined}>
+              {!studioMode && <EditableCopy value={selectedLabel} as="h3" enabled={false} onChange={() => {}} />}
               <EditableCopy value={studioCopy("intro.description", peopleMode ? "Listado de colaboradores con uno o más cursos pendientes según los filtros seleccionados." : "Concentrado mensual de avance, asignaciones y pendientes. Los indicadores se actualizan con la información publicada desde Macintosh." )} as="p" enabled={studioMode && !peopleMode} onChange={(value) => updateStudioCopy("intro.description", value)} />
               <small>{studioMode ? `Datos ficticios para edición visual · Periodo de muestra ${period}.` : usingDemo ? "Aún no hay datos sincronizados para este periodo. Publica la información desde Macintosh." : `Fecha de corte del periodo ${period}.`}</small>
             </section>}
 
             {!peopleMode ? (
               <>
-                {(!studioMode || !studioHiddenBlocks.includes("metrics")) && <section data-studio-order-key="metrics" className={studioBlockClass("metrics", "metric-grid")} style={studioMode ? { order: studioOrder("metrics") } : undefined} onClick={studioMode ? () => setStudioSelectedBlock("metrics") : undefined} onKeyDown={studioMode ? (event) => { if (event.key === "Enter" || event.key === " ") setStudioSelectedBlock("metrics"); } : undefined} role={studioMode ? "button" : undefined} tabIndex={studioMode ? 0 : undefined}>
+                {!studioHiddenBlocks.includes("metrics") && <section data-studio-order-key="metrics" className={studioBlockClass("metrics", "metric-grid")} style={{ order: studioOrder("metrics") }} onClick={studioMode ? () => setStudioSelectedBlock("metrics") : undefined} onKeyDown={studioMode ? (event) => { if (event.key === "Enter" || event.key === " ") setStudioSelectedBlock("metrics"); } : undefined} role={studioMode ? "button" : undefined} tabIndex={studioMode ? 0 : undefined}>
                   <article><EditableCopy value={studioCopy("metrics.progress", "Avance total")} enabled={studioMode} onChange={(value) => updateStudioCopy("metrics.progress", value)} /><strong>{hasTrainingData ? `${totals.progress.toFixed(1)}%` : "—"}</strong><small>{hasTrainingData ? `${totals.completed.toLocaleString("es-MX")} completados` : "Sin datos"}</small></article>
                   <article><EditableCopy value={studioCopy("metrics.assigned", "Total asignado")} enabled={studioMode} onChange={(value) => updateStudioCopy("metrics.assigned", value)} /><strong>{hasTrainingData ? totals.total.toLocaleString("es-MX") : "—"}</strong><small>{hasTrainingData ? `${filteredMetrics.length.toLocaleString("es-MX")} combinaciones` : "Sin datos"}</small></article>
                   <article><EditableCopy value={studioCopy("metrics.pending", "Pendientes")} enabled={studioMode} onChange={(value) => updateStudioCopy("metrics.pending", value)} /><strong>{hasTrainingData ? totals.pending.toLocaleString("es-MX") : "—"}</strong><small>{hasTrainingData ? `${(100 - totals.progress).toFixed(1)}% del total` : "Sin datos"}</small></article>
                 </section>}
 
-                <section className={studioMode ? "dashboard-grid studio-dashboard-grid" : "dashboard-grid"}>
-                  {(!studioMode || !studioHiddenBlocks.includes("chart")) && <article data-studio-order-key="chart" className={studioBlockClass("chart", "panel chart-panel")} style={studioMode ? { order: studioOrder("chart") } : undefined} {...studioSelectionProps("chart")}>
+                <section className="dashboard-grid studio-dashboard-grid">
+                  {!studioHiddenBlocks.includes("chart") && <article data-studio-order-key="chart" className={studioBlockClass("chart", "panel chart-panel")} style={{ order: studioOrder("chart") }} {...studioSelectionProps("chart")}>
                     <div className="panel-heading"><div><EditableCopy value={studioCopy("chart.title", "Avance mensual")} enabled={studioMode} onChange={(value) => updateStudioCopy("chart.title", value)} /><EditableCopy value={studioCopy("chart.subtitle", "Comparativo del año")} as="small" enabled={studioMode} onChange={(value) => updateStudioCopy("chart.subtitle", value)} /></div><b>{hasTrainingData ? `${totals.progress.toFixed(1)}%` : "—"}</b></div>
                     {history.length ? <div className="bars" aria-label="Gráfica de avance mensual">{history.map((item) => <div className="bar-column" key={item.label}><em>{item.value}%</em><div style={{ height: `${Math.max(item.value, 4)}%` }} /><small>{item.label}</small></div>)}</div> : <p className="comments-empty">Sin datos para el periodo seleccionado.</p>}
                   </article>}
-                  {(!studioMode || !studioHiddenBlocks.includes("ranking")) && <article data-studio-order-key="ranking" className={studioBlockClass("ranking", "panel ranking-panel")} style={studioMode ? { order: studioOrder("ranking") } : undefined} {...studioSelectionProps("ranking")}>
+                  {!studioHiddenBlocks.includes("ranking") && <article data-studio-order-key="ranking" className={studioBlockClass("ranking", "panel ranking-panel")} style={{ order: studioOrder("ranking") }} {...studioSelectionProps("ranking")}>
                     <div className="panel-heading"><div><EditableCopy value={studioCopy("ranking.title", "Ranking regional")} enabled={studioMode} onChange={(value) => updateStudioCopy("ranking.title", value)} /><EditableCopy value={studioCopy("ranking.subtitle", "Avance promedio")} as="small" enabled={studioMode} onChange={(value) => updateStudioCopy("ranking.subtitle", value)} /></div></div>
                     {regionalRanking.length ? regionalRanking.slice(0, 5).map((item, index) => <div className="rank-row" key={item.label}><b>{String(index + 1).padStart(2, "0")}</b><span>{item.label}</span><strong>{item.progress.toFixed(1)}%</strong></div>) : <p className="comments-empty">Sin datos para los filtros seleccionados.</p>}
                     <div className={showAllRegions ? "expandable-section is-open" : "expandable-section"}><div>{regionalRanking.slice(5).map((item, index) => <div className="rank-row" key={item.label}><b>{String(index + 6).padStart(2, "0")}</b><span>{item.label}</span><strong>{item.progress.toFixed(1)}%</strong></div>)}</div></div>
                     {regionalRanking.length > 5 && <button className="show-more-button" onClick={() => setShowAllRegions((current) => !current)}><span>{showAllRegions ? "Mostrar menos" : `Ver ${regionalRanking.length - 5} más`}</span><span className="more-icon-shell more-glyph" aria-hidden="true">{showAllRegions ? "−" : "+"}</span></button>}
                   </article>}
-                  {(!studioMode || !studioHiddenBlocks.includes("courses")) && <article data-studio-order-key="courses" className={studioBlockClass("courses", "panel course-panel")} style={studioMode ? { order: studioOrder("courses") } : undefined} {...studioSelectionProps("courses")}>
+                  {!studioHiddenBlocks.includes("courses") && <article data-studio-order-key="courses" className={studioBlockClass("courses", "panel course-panel")} style={{ order: studioOrder("courses") }} {...studioSelectionProps("courses")}>
                     <div className="panel-heading"><div><EditableCopy value={studioCopy("courses.title", "Avance por curso")} enabled={studioMode} onChange={(value) => updateStudioCopy("courses.title", value)} /><EditableCopy value={studioCopy("courses.subtitle", "Progreso consolidado de los cursos visibles")} as="small" enabled={studioMode} onChange={(value) => updateStudioCopy("courses.subtitle", value)} /></div></div>
                     {courseProgress.length ? <div className="course-table">{courseProgress.slice(0, 7).map((item) => <button type="button" disabled key={item.label}><span><em>{item.label}</em><small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}<div className={showAllCourses ? "expandable-section is-open" : "expandable-section"}><div>{courseProgress.slice(7).map((item) => <button type="button" disabled key={item.label}><span><em>{item.label}</em><small>{item.completed.toLocaleString("es-MX")} de {item.total.toLocaleString("es-MX")}</small></span><i><b style={{ width: `${item.progress}%` }} /></i><strong>{item.progress.toFixed(1)}%</strong></button>)}</div></div></div> : <p className="comments-empty">Sin datos para los filtros seleccionados.</p>}
                     {courseProgress.length > 7 && <button className="show-more-button" onClick={() => setShowAllCourses((current) => !current)}><span>{showAllCourses ? "Mostrar menos" : `Ver ${courseProgress.length - 7} más`}</span><span className="more-icon-shell more-glyph" aria-hidden="true">{showAllCourses ? "−" : "+"}</span></button>}
@@ -1163,6 +1368,55 @@ export default function Home({ studioMode = false }: { studioMode?: boolean }) {
               </section>
             )}</>}
             {openBook === "tienda" && <footer className="tienda-confidentiality"><strong>La información contenida en la totalidad de este documento constituye un secreto de marca y/o información de Grupo Coppel; y deberá tratarse de acuerdo con las Decisiones, Políticas y Procesos vigentes en la organización.</strong></footer>}
+            </div>}
+            {studioMode && <div className="studio-comment-layer" aria-label="Comentarios fijados en la hoja">
+              {studioComments.map((comment, index) => {
+                const position = comment.anchor !== "sheet"
+                  ? studioCommentPositions[comment.id]
+                  : { x: comment.x, y: comment.y };
+                if (!position) return null;
+                return <div
+                className={`studio-comment-pin${comment.completed ? " is-completed" : ""}${activeStudioComment === comment.id ? " is-open" : ""}${position.x < 0.18 ? " tooltip-align-left" : position.x > 0.82 ? " tooltip-align-right" : ""}${position.y < 0.12 ? " tooltip-below" : ""}`}
+                key={comment.id}
+                style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%` }}
+                onContextMenu={(event) => event.stopPropagation()}
+                onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setActiveStudioComment(null); }}
+              >
+                <button
+                  type="button"
+                  className="studio-comment-marker"
+                  aria-label={`Comentario ${index + 1}: ${comment.text}`}
+                  aria-expanded={activeStudioComment === comment.id}
+                  onClick={(event) => { event.stopPropagation(); setActiveStudioComment((current) => current === comment.id ? null : comment.id); }}
+                >{comment.completed ? <span aria-hidden="true">✓</span> : <span aria-hidden="true">{index + 1}</span>}</button>
+                <aside aria-label={`Detalle del comentario ${index + 1}`}>
+                  <p>{comment.text}</p>
+                  <small>{comment.completed && comment.completedAt
+                    ? `Completado · ${new Date(comment.completedAt).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}`
+                    : comment.createdAt ? new Date(comment.createdAt).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" }) : "Comentario compartido"}</small>
+                  <div className="studio-comment-actions">
+                    {!comment.completed && <button type="button" disabled={studioCommentAction === comment.id} onClick={() => void completeComment(comment)}><span aria-hidden="true">✓</span> Completar</button>}
+                    <button type="button" className="delete" disabled={studioCommentAction === comment.id} onClick={() => void removeComment(comment)} aria-label="Eliminar comentario"><span aria-hidden="true">⌫</span> Eliminar</button>
+                  </div>
+                </aside>
+              </div>})}
+              {studioCommentComposer && <form
+                className={`studio-comment-composer${studioCommentComposer.sheetX > 0.68 ? " align-right" : ""}${studioCommentComposer.sheetY > 0.82 ? " align-up" : ""}`}
+                style={{ left: `${studioCommentComposer.sheetX * 100}%`, top: `${studioCommentComposer.sheetY * 100}%` }}
+                onSubmit={(event) => { event.preventDefault(); void submitStudioComment(); }}
+              >
+                <strong>Fijar comentario</strong>
+                <textarea
+                  ref={studioCommentInputRef}
+                  maxLength={500}
+                  value={studioCommentText}
+                  onChange={(event) => setStudioCommentText(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === "Escape") setStudioCommentComposer(null); }}
+                  placeholder="Escribe una observación…"
+                />
+                {studioCommentStatus === "error" && <small>No se pudo guardar. Intenta nuevamente.</small>}
+                <div><button type="button" onClick={() => setStudioCommentComposer(null)}>Cancelar</button><button type="submit" disabled={!studioCommentText.trim() || studioCommentStatus === "saving"}>{studioCommentStatus === "saving" ? "Fijando…" : "Fijar"}</button></div>
+              </form>}
             </div>}
           </article>
         </div>

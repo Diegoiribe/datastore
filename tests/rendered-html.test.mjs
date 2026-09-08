@@ -1,21 +1,13 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(
-    new Request("http://localhost/", { headers: { accept: "text/html" } }),
-    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
-    { waitUntil() {}, passThroughOnException() {} },
-  );
+function builtPage(filename) {
+  return readFile(new URL(`../.next/server/app/${filename}`, import.meta.url), "utf8");
 }
 
-test("renders the Macintosh Studio report library", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  const html = await response.text();
+test("builds the Macintosh Studio report library", async () => {
+  const html = await builtPage("index.html");
   assert.match(html, /<title>Macintosh Studio · Reportes<\/title>/i);
   assert.match(html, /Todos los reportes/);
   assert.match(html, /Buscar un reporte/);
@@ -23,20 +15,15 @@ test("renders the Macintosh Studio report library", async () => {
   assert.doesNotMatch(html, /codex-preview/);
 });
 
-test("renders the Macintosh Studio editor", async () => {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("studio-test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-  const response = await worker.fetch(
-    new Request("http://localhost/studio", { headers: { accept: "text/html" } }),
-    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
-    { waitUntil() {}, passThroughOnException() {} },
-  );
-  assert.equal(response.status, 200);
-  const html = await response.text();
+test("builds the collection-scoped Macintosh Studio editor", async () => {
+  const html = await builtPage("studio.html");
   assert.match(html, /Studio · Macintosh Studio/);
-  assert.match(html, /header-section-title[^>]*>Studio</);
+  assert.match(html, /header-section-title[^>]*>Studio/);
   assert.match(html, /Todos los reportes/);
   assert.match(html, /Buscar un reporte/);
+  assert.match(html, />Plantilla</i);
+  assert.match(html, /Composición compartida de la colección/i);
+  assert.match(html, /Capacitación especializada/i);
+  assert.doesNotMatch(html, /5 capítulos/i);
   assert.doesNotMatch(html, /Abrir plantilla/);
 });

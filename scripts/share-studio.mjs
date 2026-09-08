@@ -15,6 +15,9 @@ const vinext = path.join(root, "node_modules", ".bin", isWindows ? "vinext.cmd" 
 const ngrok = process.env.NGROK_BIN || (isWindows ? "ngrok.exe" : "ngrok");
 const macintoshApi = new URL(process.env.MACINTOSH_API_URL || "http://127.0.0.1:8010");
 const studioToken = process.env.MACINTOSH_STUDIO_TOKEN || "";
+const requireGoogleAuth = /^(1|true|yes|on)$/i.test(
+  process.env.MACINTOSH_STUDIO_REQUIRE_GOOGLE_AUTH || "",
+);
 const trafficPolicy = path.join(root, "ngrok-traffic-policy.yml");
 const children = new Set();
 let gateway;
@@ -185,9 +188,16 @@ try {
   });
 
   console.log(`\nMacintosh Studio local: http://127.0.0.1:${gatewayPort}/studio`);
+  if (requireGoogleAuth) {
+    console.log("Protección Google activa: solo podrán entrar cuentas @coppel.com.");
+  } else {
+    console.log("Acceso por enlace activo: cualquiera que tenga la URL podrá abrir Studio.");
+  }
   console.log("Abriendo enlace temporal de Studio. Ctrl+C cierra el enlace y el editor.\n");
 
-  const tunnel = spawn(ngrok, ["http", `http://127.0.0.1:${gatewayPort}`, "--traffic-policy-file", trafficPolicy], {
+  const ngrokArgs = ["http", `http://127.0.0.1:${gatewayPort}`];
+  if (requireGoogleAuth) ngrokArgs.push("--traffic-policy-file", trafficPolicy);
+  const tunnel = spawn(ngrok, ngrokArgs, {
     cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
   });

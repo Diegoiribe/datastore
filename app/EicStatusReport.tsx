@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import {
   CategoryDashboard,
   EicAdministrativeRow,
@@ -60,10 +60,10 @@ function modalityLabel(value: string) {
 }
 
 function statusTone(label: string) {
-  const key = label.toLocaleLowerCase("es");
-  if (/impartid|seleccionado|con fecha|complet|finaliz/.test(key)) return "good";
-  if (/curso|proceso|espera|pendiente|seleccionar|prepar/.test(key)) return "warning";
-  if (/eliminad|cancel|sin estatus/.test(key)) return "muted";
+  const key = normalizeLabel(label);
+  if (/impartid|seleccionado|con fecha|complet|finaliz|alta de proveedor/.test(key)) return "good";
+  if (/curso|proceso|espera|pendiente|seleccionar|prepar|contrato marco/.test(key)) return "warning";
+  if (/eliminad|cancel|sin estatus|^n\/?a$|no aplica/.test(key)) return "muted";
   return "neutral";
 }
 
@@ -72,6 +72,15 @@ function groupStatus(rows: EicAdministrativeRow[], labelKey: string, valueKey: s
   rows.forEach((row) => {
     const label = text(row, labelKey, "Sin estatus");
     groups.set(label, (groups.get(label) ?? 0) + number(row, valueKey));
+  });
+  return [...groups].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
+}
+
+function groupOccurrences(rows: EicAdministrativeRow[], labelKey: string) {
+  const groups = new Map<string, number>();
+  rows.forEach((row) => {
+    const label = text(row, labelKey, "N/A");
+    groups.set(label, (groups.get(label) ?? 0) + 1);
   });
   return [...groups].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
 }
@@ -85,10 +94,77 @@ const rankingColumns: Array<{ key: RankingColumnKey; label: string; numeric?: bo
   { key: "inversion", label: "Inversión actual", numeric: true },
 ];
 
+export type EicBlockKey = "intro" | "metrics" | "budget" | "authorized" | "distribution" | "categories" | "ranking" | "flow" | "areas" | "initiatives";
+
+export const eicDefaultBlockOrder: EicBlockKey[] = [
+  "intro",
+  "metrics",
+  "budget",
+  "authorized",
+  "distribution",
+  "categories",
+  "ranking",
+  "flow",
+  "areas",
+  "initiatives",
+];
+
+export const eicBlockLabels: Record<EicBlockKey, string> = {
+  intro: "Presentación",
+  metrics: "Indicadores financieros",
+  budget: "Resumen presupuestal",
+  authorized: "Plan autorizado",
+  distribution: "Distribución de capacitación",
+  categories: "Presupuesto por categoría",
+  ranking: "Ranking de colaboradores",
+  flow: "Flujo operativo",
+  areas: "Detalle por área",
+  initiatives: "Planes y capacitaciones",
+};
+
+function EicEditableCopy({ value, enabled, onChange, as: Tag = "span" }: {
+  value: string;
+  enabled: boolean;
+  onChange(value: string): void;
+  as?: "span" | "strong" | "small" | "p" | "h3" | "h4";
+}) {
+  return <Tag
+    className={enabled ? "studio-editable-copy" : undefined}
+    contentEditable={enabled}
+    suppressContentEditableWarning
+    spellCheck
+    onClick={(event) => event.stopPropagation()}
+    onBlur={(event) => {
+      const nextValue = event.currentTarget.innerText.trim();
+      if (nextValue && nextValue !== value) onChange(nextValue);
+    }}
+    onKeyDown={(event) => {
+      if (Tag !== "p" && event.key === "Enter") {
+        event.preventDefault();
+        event.currentTarget.blur();
+      }
+    }}
+  >{value}</Tag>;
+}
+
 export default function EicStatusReport({
   dashboards,
+  layoutOrder = eicDefaultBlockOrder,
+  hiddenBlocks = [],
+  studioMode = false,
+  selectedBlock,
+  onSelectBlock,
+  copy = (_field, fallback) => fallback,
+  onCopyChange,
 }: {
   dashboards: CategoryDashboard[];
+  layoutOrder?: EicBlockKey[];
+  hiddenBlocks?: EicBlockKey[];
+  studioMode?: boolean;
+  selectedBlock?: EicBlockKey;
+  onSelectBlock?(key: EicBlockKey): void;
+  copy?(field: string, fallback: string): string;
+  onCopyChange?(field: string, value: string): void;
 }) {
   const [views, setViews] = useState<EicAdministrativeViews>({});
   const [loading, setLoading] = useState(true);
@@ -223,6 +299,7 @@ export default function EicStatusReport({
   } as CSSProperties;
   const quotationStatus = useMemo(() => groupStatus(quotationRows, "estatus_cotizacion", "necesidades"), [quotationRows]);
   const trainingStatus = useMemo(() => groupStatus(trainingRows, "estatus_grupo", "grupos"), [trainingRows]);
+  const contractingStatus = useMemo(() => groupOccurrences(trainingGroups, "estatus_contratacion"), [trainingGroups]);
   const paymentStatus = useMemo(() => groupStatus(paymentRows, "estatus_pago", "movimientos"), [paymentRows]);
 
   const totals = useMemo(() => {
@@ -321,6 +398,22 @@ export default function EicStatusReport({
   }, [initiatives]);
 
   const scopeLabel = cLevel !== "all" ? cLevel : "Vista general";
+  const editable = (field: string, fallback: string, as: "span" | "strong" | "small" | "p" | "h3" | "h4" = "span") => <EicEditableCopy
+    value={copy(field, fallback)}
+    enabled={studioMode}
+    onChange={(value) => onCopyChange?.(field, value)}
+    as={as}
+  />;
+  const blockOrder = (key: EicBlockKey) => layoutOrder.indexOf(key) + 1;
+  const blockClass = (key: EicBlockKey, base: string) => `${base}${studioMode ? " studio-editable-block" : ""}${studioMode && selectedBlock === key ? " studio-block-selected" : ""}`;
+  const blockSelectionProps = (key: EicBlockKey) => studioMode ? {
+    role: "button" as const,
+    tabIndex: 0,
+    onClick: () => onSelectBlock?.(key),
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key === "Enter" || event.key === " ") onSelectBlock?.(key);
+    },
+  } : {};
 
   return <div className="eic-report">
     <div className="floating-toolbar-frame eic-toolbar-frame">
@@ -329,36 +422,36 @@ export default function EicStatusReport({
       </div>
     </div>
 
-    <section className="report-lead eic-lead">
+    {!hiddenBlocks.includes("intro") && <section data-studio-order-key="intro" className={blockClass("intro", "report-lead eic-lead")} style={{ order: blockOrder("intro") }} {...blockSelectionProps("intro")}>
       <span>RESUMEN EJECUTIVO</span>
       <h3>{scopeLabel}</h3>
-      <p>Lectura consolidada del presupuesto, la inversión y el avance contable de los planes de capacitación.</p>
+      {editable("eic.intro.description", "Lectura consolidada del presupuesto, la inversión y el avance contable de los planes de capacitación.", "p")}
       <small>Información consolidada al {primaryDashboard?.cutoffDate || primaryDashboard?.period}.</small>
-    </section>
+    </section>}
 
     {loading ? <section className="eic-loading">Preparando el resumen administrativo…</section> : error ? <section className="eic-loading error">{error}</section> : <>
-      <section className="eic-kpis">
-        <article><span>Presupuesto autorizado</span><strong>{money(totals.budget)}</strong><small>Base disponible para la selección</small></article>
-        <article><span>Inversión actual</span><strong>{money(totals.investment)}</strong><small>{percentage(totals.budgetProgress)} del presupuesto</small></article>
-        <article><span>Por ejercer</span><strong>{money(totals.remaining)}</strong><small>Saldo presupuestal estimado</small></article>
-        <article><span>Cargado al centro</span><strong>{money(totals.charged)}</strong><small>{percentage(totals.accountingProgress)} de avance contable</small></article>
-      </section>
+      {!hiddenBlocks.includes("metrics") && <section data-studio-order-key="metrics" className={blockClass("metrics", "eic-kpis")} style={{ order: blockOrder("metrics") }} {...blockSelectionProps("metrics")}>
+        <article>{editable("eic.metrics.budget", "Presupuesto autorizado")}<strong>{money(totals.budget)}</strong><small>Base disponible para la selección</small></article>
+        <article>{editable("eic.metrics.investment", "Inversión actual")}<strong>{money(totals.investment)}</strong><small>{percentage(totals.budgetProgress)} del presupuesto</small></article>
+        <article>{editable("eic.metrics.remaining", "Por ejercer")}<strong>{money(totals.remaining)}</strong><small>Saldo presupuestal estimado</small></article>
+        <article>{editable("eic.metrics.charged", "Cargado al centro")}<strong>{money(totals.charged)}</strong><small>{percentage(totals.accountingProgress)} de avance contable</small></article>
+      </section>}
 
-      <section className="eic-financial-grid">
+      {!hiddenBlocks.includes("budget") && <section data-studio-order-key="budget" className={blockClass("budget", "eic-financial-grid")} style={{ order: blockOrder("budget") }} {...blockSelectionProps("budget")}>
         <article className="eic-financial-card">
-          <header><div><span>Uso del presupuesto</span><small>Inversión actual contra presupuesto autorizado</small></div><strong>{percentage(totals.budgetProgress)}</strong></header>
+          <header><div>{editable("eic.budget.title", "Uso del presupuesto")}{editable("eic.budget.subtitle", "Inversión actual contra presupuesto autorizado", "small")}</div><strong>{percentage(totals.budgetProgress)}</strong></header>
           <div className="eic-budget-track" aria-label={`Avance presupuestal ${percentage(totals.budgetProgress)}`}><i style={{ width: `${Math.min(totals.budgetProgress * 100, 100)}%` }} /></div>
           <div className="eic-budget-legend"><span><i className="used" />Ejercido <b>{money(totals.investment)}</b></span><span><i />Disponible <b>{money(Math.max(totals.remaining, 0))}</b></span></div>
         </article>
         <article className="eic-accounting-card">
-          <span>Avance contable</span>
+          {editable("eic.accounting.title", "Avance contable")}
           <div className="eic-ring" style={{ "--ring-progress": `${Math.min(totals.accountingProgress * 360, 360)}deg` } as CSSProperties}><strong>{percentage(totals.accountingProgress)}</strong></div>
           <small>{money(totals.charged)} cargados al centro</small>
         </article>
-      </section>
+      </section>}
 
-      <section className="eic-authorized-plan">
-        <header><div><h4>Solicitados en Plan Autorizado</h4><p>Desglose de necesidades y modalidades de capacitación</p></div><div className="eic-carousel-controls" aria-label="Navegar por los indicadores"><button type="button" className="eic-carousel-arrow previous" onClick={() => moveAuthorizedPlan(-1)} disabled={!authorizedNav.back} aria-label="Ver indicador anterior" /><button type="button" className="eic-carousel-arrow next" onClick={() => moveAuthorizedPlan(1)} disabled={!authorizedNav.forward} aria-label="Ver siguiente indicador" /></div></header>
+      {!hiddenBlocks.includes("authorized") && <section data-studio-order-key="authorized" className={blockClass("authorized", "eic-authorized-plan")} style={{ order: blockOrder("authorized") }} {...blockSelectionProps("authorized")}>
+        <header><div>{editable("eic.authorized.title", "Solicitados en Plan Autorizado", "h4")}{editable("eic.authorized.subtitle", "Desglose de necesidades y modalidades de capacitación", "p")}</div><div className="eic-carousel-controls" aria-label="Navegar por los indicadores"><button type="button" className="eic-carousel-arrow previous" onClick={() => moveAuthorizedPlan(-1)} disabled={!authorizedNav.back} aria-label="Ver indicador anterior" /><button type="button" className="eic-carousel-arrow next" onClick={() => moveAuthorizedPlan(1)} disabled={!authorizedNav.forward} aria-label="Ver siguiente indicador" /></div></header>
         <div ref={authorizedWindowRef} className="eic-authorized-window" role="region" aria-label="Indicadores del Plan Autorizado" onScroll={(event) => { const node = event.currentTarget; setAuthorizedNav({ back: node.scrollLeft > 2, forward: node.scrollLeft + node.clientWidth < node.scrollWidth - 2 }); }}>
           <div className="eic-authorized-grid">
             <AuthorizedMetric label="DNCs" value={authorizedPlan.dnc} />
@@ -372,34 +465,34 @@ export default function EicStatusReport({
             <AuthorizedMetric label="Pax proyectados" value={authorizedPlan.projectedPeople} />
           </div>
         </div>
-      </section>
+      </section>}
 
-      <section className="eic-section eic-distribution-section">
-        <header className="eic-section-heading"><div><span>Distribución de capacitación</span><small>Participantes por inversión individual y cursos por modalidad</small></div></header>
+      {!hiddenBlocks.includes("distribution") && <section data-studio-order-key="distribution" className={blockClass("distribution", "eic-section eic-distribution-section")} style={{ order: blockOrder("distribution") }} {...blockSelectionProps("distribution")}>
+        <header className="eic-section-heading"><div>{editable("eic.distribution.title", "Distribución de capacitación")}{editable("eic.distribution.subtitle", "Participantes por inversión individual y cursos por modalidad", "small")}</div></header>
         <div className="eic-distribution-grid">
           <article className="eic-clusters">
-            <header><strong>Distribución por clusters</strong><small>Participantes reales por precio negociado por persona</small></header>
+            <header>{editable("eic.clusters.title", "Distribución por clusters", "strong")}{editable("eic.clusters.subtitle", "Participantes reales por precio negociado por persona", "small")}</header>
             <div>{clusterDistribution.map((item) => <div className="eic-cluster-row" key={item.label}>
               <span>{item.label}</span><i><b style={{ width: `${item.share * 100}%` }} /></i><strong>{percentage(item.share)}</strong><small>{item.people.toLocaleString("es-MX")} participantes</small>
             </div>)}</div>
           </article>
           <article className="eic-modalities">
-            <header><strong>Cantidad de cursos por modalidad</strong><small>Cursos únicos dentro de la selección actual</small></header>
+            <header>{editable("eic.modalities.title", "Cantidad de cursos por modalidad", "strong")}{editable("eic.modalities.subtitle", "Cursos únicos dentro de la selección actual", "small")}</header>
             <div>{modalities.length ? modalities.map((item) => <span key={item.label}><small>{item.label}</small><strong>{item.value.toLocaleString("es-MX")}</strong></span>) : <p className="eic-empty">Sin modalidades registradas.</p>}</div>
           </article>
         </div>
-      </section>
+      </section>}
 
-      <section className="eic-section">
-        <header className="eic-section-heading"><div><span>Presupuesto por categoría</span><small>Participación de la inversión actual por tipo de capacitación</small></div></header>
+      {!hiddenBlocks.includes("categories") && <section data-studio-order-key="categories" className={blockClass("categories", "eic-section")} style={{ order: blockOrder("categories") }} {...blockSelectionProps("categories")}>
+        <header className="eic-section-heading"><div>{editable("eic.categories.title", "Presupuesto por categoría")}{editable("eic.categories.subtitle", "Participación de la inversión actual por tipo de capacitación", "small")}</div></header>
         <div className="eic-category-table">
           <div className="eic-category-head"><span>Categoría</span><span>Porcentaje del total</span><span>Inversión actual</span></div>
           {budgetCategories.length ? budgetCategories.map((item) => <div className="eic-category-row" key={item.label}><strong>{item.label}</strong><span><em>{percentage(item.share)}</em><i><b style={{ width: `${item.share * 100}%` }} /></i></span><strong>{compactNumber(item.value)}</strong></div>) : <p className="eic-empty">Sin categorías registradas.</p>}
         </div>
-      </section>
+      </section>}
 
-      <section className="eic-section">
-        <header className="eic-section-heading"><div><span>Ranking de colaboradores con mayor inversión en cursos</span><small>Inversión individual acumulada por participante dentro de la selección</small></div><b>{collaboratorRanking.length.toLocaleString("es-MX")} colaboradores</b></header>
+      {!hiddenBlocks.includes("ranking") && <section data-studio-order-key="ranking" className={blockClass("ranking", "eic-section")} style={{ order: blockOrder("ranking") }} {...blockSelectionProps("ranking")}>
+        <header className="eic-section-heading"><div>{editable("eic.ranking.title", "Ranking de colaboradores con mayor inversión en cursos")}{editable("eic.ranking.subtitle", "Inversión individual acumulada por participante dentro de la selección", "small")}</div><b>{collaboratorRanking.length.toLocaleString("es-MX")} colaboradores</b></header>
         {collaboratorRanking.length ? <div ref={rankingTableRef} className="eic-ranking-table">
           <div className="eic-ranking-head" style={rankingGridStyle}>
             <span>No.</span><span>No. colaborador</span><span>Colaborador</span>
@@ -424,20 +517,21 @@ export default function EicStatusReport({
           </div>)}
           {collaboratorRanking.length > 10 && <p className="eic-ranking-foot">Mostrando los 10 colaboradores con mayor inversión de {collaboratorRanking.length.toLocaleString("es-MX")}.</p>}
         </div> : <div className="eic-ranking-placeholder"><span>Sin participantes identificables</span><p>La selección actual no incluye el detalle de número, nombre y puesto necesario para construir el ranking.</p></div>}
-      </section>
+      </section>}
 
-      <section className="eic-section">
-        <header className="eic-section-heading"><div><span>Flujo operativo</span><small>Del requerimiento al cargo contable</small></div></header>
+      {!hiddenBlocks.includes("flow") && <section data-studio-order-key="flow" className={blockClass("flow", "eic-section")} style={{ order: blockOrder("flow") }} {...blockSelectionProps("flow")}>
+        <header className="eic-section-heading"><div>{editable("eic.flow.title", "Flujo operativo")}{editable("eic.flow.subtitle", "Del requerimiento al cargo contable", "small")}</div></header>
         <div className="eic-pipeline">
           <StatusColumn title="Cotizaciones" subtitle={`${quotationStatus.reduce((total, item) => total + item.value, 0)} necesidades`} items={quotationStatus} />
           <StatusColumn title="Capacitaciones" subtitle={`${trainingStatus.reduce((total, item) => total + item.value, 0)} grupos`} items={trainingStatus} />
+          <StatusColumn title="Contratación" subtitle={`${contractingStatus.reduce((total, item) => total + item.value, 0)} grupos`} items={contractingStatus} />
           <StatusColumn title="Pagos" subtitle={money(operational.executedPayment)} items={paymentStatus} />
         </div>
         <div className="eic-payment-note"><span>Pago pendiente</span><strong>{money(operational.pendingPayment)}</strong><small>Monto todavía no ejecutado en la selección actual.</small></div>
-      </section>
+      </section>}
 
-      <section className="eic-section">
-        <header className="eic-section-heading"><div><span>Detalle por área</span><small>Lectura financiera y operativa de las direcciones y divisiones</small></div><b>{filteredDirections.filter((row) => text(row, "direccion_c_level") !== "Sin dirección").length} áreas</b></header>
+      {!hiddenBlocks.includes("areas") && <section data-studio-order-key="areas" className={blockClass("areas", "eic-section")} style={{ order: blockOrder("areas") }} {...blockSelectionProps("areas")}>
+        <header className="eic-section-heading"><div>{editable("eic.areas.title", "Detalle por área")}{editable("eic.areas.subtitle", "Lectura financiera y operativa de las direcciones y divisiones", "small")}</div><b>{filteredDirections.filter((row) => text(row, "direccion_c_level") !== "Sin dirección").length} áreas</b></header>
         <div className="eic-direction-table">
           <div className="eic-direction-head"><span>Dirección</span><span>Capacitaciones</span><span>Presupuesto</span><span>Inversión</span><span>Avance</span></div>
           {filteredDirections.filter((row) => text(row, "direccion_c_level") !== "Sin dirección").map((row) => <button type="button" key={text(row, "direccion_c_level")} onClick={() => setCLevel(text(row, "direccion_c_level"))}>
@@ -448,10 +542,10 @@ export default function EicStatusReport({
             <strong>{percentage(number(row, "avance_presupuesto"))}</strong>
           </button>)}
         </div>
-      </section>
+      </section>}
 
-      <section className="eic-section eic-initiatives-section">
-        <header className="eic-section-heading eic-initiatives-heading"><div><span>Planes y capacitaciones</span><small>Seguimiento individual de las iniciativas relacionadas</small></div><b>{visibleInitiatives.length} de {initiatives.length}</b></header>
+      {!hiddenBlocks.includes("initiatives") && <section data-studio-order-key="initiatives" className={blockClass("initiatives", "eic-section eic-initiatives-section")} style={{ order: blockOrder("initiatives") }} {...blockSelectionProps("initiatives")}>
+        <header className="eic-section-heading eic-initiatives-heading"><div>{editable("eic.initiatives.title", "Planes y capacitaciones")}{editable("eic.initiatives.subtitle", "Seguimiento individual de las iniciativas relacionadas", "small")}</div><b>{visibleInitiatives.length} de {initiatives.length}</b></header>
         <div className="eic-initiative-tools">
           <label className="eic-initiative-search"><i aria-hidden="true">⌕</i><input value={initiativeQuery} onChange={(event) => setInitiativeQuery(event.target.value)} placeholder="Buscar plan, capacitación, ID o proveedor" aria-label="Buscar planes y capacitaciones" /></label>
           <PopupFilter label="Estatus" className="course-filter eic-status-filter" value={effectiveInitiativeStatus} options={[{ value: "all", label: "Todos los estatus" }, ...initiativeStatuses.map((item) => ({ value: item, label: item }))]} open={openFilter === "eic-status"} onOpenChange={(open) => setOpenFilter(open ? "eic-status" : null)} onChange={setInitiativeStatus} />
@@ -466,17 +560,54 @@ export default function EicStatusReport({
           </article>)}
           {!visibleInitiatives.length && <p className="eic-empty">No hay iniciativas que coincidan con los filtros.</p>}
         </div>
-      </section>
+      </section>}
     </>}
   </div>;
 }
 
 function StatusColumn({ title, subtitle, items }: { title: string; subtitle: string; items: Array<{ label: string; value: number }> }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const total = items.reduce((sumValue, item) => sumValue + item.value, 0);
-  return <article>
+  const visibleItems = items.slice(0, 5);
+  const activeItem = activeIndex === null ? null : visibleItems[activeIndex];
+  const activePercentage = activeItem && total ? (activeItem.value / total) * 100 : null;
+  const pieSegments = items.map((item, index) => ({
+    item,
+    share: total ? (item.value / total) * 100 : 0,
+    offset: total ? (items.slice(0, index).reduce((sumValue, previous) => sumValue + previous.value, 0) / total) * 100 : 0,
+  }));
+  return <article className="eic-status-column" onMouseLeave={() => setActiveIndex(null)}>
     <header><span>{title}</span><small>{subtitle}</small></header>
-    <div className="eic-status-track">{items.map((item) => <i key={item.label} className={statusTone(item.label)} style={{ width: `${total ? (item.value / total) * 100 : 0}%` }} title={`${item.label}: ${item.value}`} />)}</div>
-    <div className="eic-status-list">{items.slice(0, 5).map((item) => <span key={item.label}><i className={statusTone(item.label)} /><b>{item.label}</b><strong>{item.value.toLocaleString("es-MX")}</strong></span>)}</div>
+    <div className="eic-status-pie-shell">
+      <svg className={activeIndex === null ? "eic-status-pie" : "eic-status-pie has-active-segment"} viewBox="0 0 100 100" role="img" aria-label={`${title}: distribución porcentual por estatus`}>
+        <circle className="eic-status-pie-background" cx="50" cy="50" r="39" pathLength="100" />
+        {pieSegments.map(({ item, share, offset }, index) => {
+          return <circle
+            key={item.label}
+            className={`eic-status-pie-segment ${statusTone(item.label)}${activeIndex === index ? " is-active" : ""}`}
+            cx="50"
+            cy="50"
+            r="39"
+            pathLength="100"
+            strokeDasharray={`${share} ${100 - share}`}
+            strokeDashoffset={-offset}
+          ><title>{`${item.label}: ${share.toFixed(1)}%`}</title></circle>;
+        })}
+      </svg>
+      <span className={activeItem ? "eic-status-pie-value is-active" : "eic-status-pie-value"} aria-live="polite">
+        <strong>{activePercentage === null ? total.toLocaleString("es-MX") : `${activePercentage.toFixed(1)}%`}</strong>
+        <small>{activeItem ? "del total" : "total"}</small>
+      </span>
+    </div>
+    <div className="eic-status-list">{visibleItems.map((item, index) => <button
+      type="button"
+      className={activeIndex === index ? "is-active" : undefined}
+      key={item.label}
+      onMouseEnter={() => setActiveIndex(index)}
+      onFocus={() => setActiveIndex(index)}
+      onBlur={() => setActiveIndex(null)}
+      aria-label={`${item.label}: ${item.value.toLocaleString("es-MX")}, ${total ? ((item.value / total) * 100).toFixed(1) : "0.0"}%`}
+    ><i className={statusTone(item.label)} /><b>{item.label}</b><strong>{activeIndex === index ? `${total ? ((item.value / total) * 100).toFixed(1) : "0.0"}%` : item.value.toLocaleString("es-MX")}</strong></button>)}</div>
   </article>;
 }
 

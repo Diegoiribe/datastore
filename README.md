@@ -2,7 +2,7 @@
 
 > Para continuar desde Windows o desde una sesión nueva, lee primero
 > [`WINDOWS_HANDOFF.md`](WINDOWS_HANDOFF.md). Contiene el estado vigente, las
-> invariantes de datos y el pendiente de ngrok/Firebase.
+> invariantes de datos y el despliegue de Vercel/Firebase.
 
 Macintosh Studio reúne dos espacios del mismo producto:
 
@@ -22,7 +22,12 @@ La lógica se mantiene separada para que el visor pueda seguir consumiendo datos
 - Caché durante la sesión para evitar lecturas repetidas.
 - Estado vacío explícito cuando no hay publicaciones disponibles.
 
-Los reportes consultan la API local de Macintosh. Los planes de Tienda cargados en Macintosh salen directamente de su base local; los reportes complementarios, como Planes de capacitación, son recuperados por Macintosh desde Firebase. La cuenta de servicio permanece fuera del navegador. La URL se configura con `NEXT_PUBLIC_MACINTOSH_API_URL` y por defecto es `http://localhost:8010`.
+Los reportes consultan la API local de Macintosh. Los planes de Tienda y
+Capacitación especializada cargados con `eic_maestro` salen directamente de su
+base local; Firebase queda como compatibilidad para categorías complementarias
+que todavía no se hayan migrado. La cuenta de servicio permanece fuera del
+navegador. La URL se configura con `NEXT_PUBLIC_MACINTOSH_API_URL` y por defecto
+es `http://localhost:8010`.
 
 Macintosh Studio recibe desde Macintosh la estructura publicada de reportes:
 
@@ -42,15 +47,26 @@ Cada fragmento tabular guarda `columns`, `row_count` y una lista plana `values`.
 Studio está disponible en `/studio` e incluye:
 
 - Un conjunto determinista de categorías, métricas, regiones, cursos y colaboradores ficticios. `/studio` nunca solicita los tableros reales de Macintosh.
-- Edición directa de títulos y descripciones permitidos; fechas de corte y mensajes del servicio permanecen bloqueados.
+- La plantilla financiera EIC heredada del antiguo DataStore, alimentada en
+  Studio por presupuesto, áreas, iniciativas y personas completamente ficticias.
+- Una sola plantilla visual por colección. Los títulos de colección, fechas de corte y mensajes del servicio permanecen bloqueados.
 - Edición directa del texto dentro de la hoja, sin un inspector separado.
 - Botón **Guardar**: permanece gris sin cambios, se vuelve negro al editar y es la única acción que sincroniza con Macintosh.
 - Persistencia compartida de textos, orden y visibilidad por reporte mediante Macintosh y Firebase; el navegador conserva un borrador temporal para tolerar desconexiones.
-- Reordenamiento de secciones desde el catálogo mediante arrastre o controles accesibles.
+- Reordenamiento de secciones desde el catálogo mediante arrastre o controles accesibles. Reportes lee y aplica el mismo `layout.order` y `layout.hidden` guardado por Studio.
 - Visibilidad individual por sección, también guardada explícitamente.
+- Capacitación especializada expone sus diez bloques EIC reales en Studio: presentación, indicadores financieros, resumen presupuestal, plan autorizado, distribución, presupuesto por categoría, ranking de colaboradores, flujo operativo, detalle por área y planes/capacitaciones. No reutiliza el catálogo genérico de cinco bloques de Tienda.
+- Sus títulos, subtítulos, etiquetas financieras y texto de presentación se editan directamente dentro de la hoja y se guardan con la colección.
+- El flujo operativo representa Cotizaciones, Capacitaciones, Contratación y Pagos con gráficas de pastel interactivas. Contratación lee los cuatro estados canónicos de `Capacitaciones en seguimiento`. Hover o foco sobre una leyenda destaca su segmento y muestra el porcentaje correspondiente.
 - Vista previa sin herramientas de edición.
+- Comentarios compartidos fijados con clic derecho únicamente dentro de la hoja;
+  los pines acompañan el scroll y muestran su texto al pasar el cursor. Un clic
+  mantiene abierta la tarjeta para marcarla como completada o eliminarla. Los
+  comentarios nuevos guardan su posición dentro del bloque seleccionado y se
+  desplazan con él al reordenar. Los anteriores aprovechan su ancla guardada para
+  acompañar al bloque sin reescribir el registro histórico.
 
-Studio reutiliza los mismos componentes, carátulas, navegación, textos base, filtros y dimensiones de Reportes. Los títulos y descripciones guardados se vuelven a leer desde Macintosh, por lo que Reportes muestra el mismo contenido en otras pestañas y computadoras conectadas. Cambiar el título actualiza el nombre visible en portada, catálogo y encabezado, pero conserva la clave técnica original en Macintosh.
+Studio reutiliza los mismos componentes, carátulas, navegación, textos base, filtros y dimensiones de Reportes. Cada colección guarda una sola composición compartida por todos sus reportes. Los textos guardados se vuelven a leer desde Macintosh, por lo que Reportes muestra el mismo contenido en otras pestañas y computadoras conectadas; el nombre de la colección no se edita.
 
 ## Iniciar Macintosh Studio
 
@@ -64,33 +80,54 @@ npm run dev
 - Reportes: `http://localhost:5175`
 - Studio: `http://localhost:5175/studio`
 
-## Compartir únicamente Studio con ngrok
+## Compartir Studio con Vercel
 
-Con ngrok instalado y autorizado:
+Existe un solo despliegue en `https://macintosh-studio.vercel.app`. Los enlaces se
+crean desde la terminal de Macintosh y caducan después de siete días:
 
-```bash
-npm run studio:share
+```text
+studio tienda share
+studio staff share
+studio cobranza share
+studio capacitación especializada share
+studio share
+studio status
+studio tienda stop
+studio stop
 ```
 
-También puede iniciarse desde la terminal de Macintosh con `studio share`. Los comandos
-`studio status` y `studio stop` permiten consultar el enlace vigente y cerrarlo. La
-ruta puede configurarse con `MACINTOSH_STUDIO_PATH`; si no se declara una clave,
-Macintosh genera una clave efímera y la entrega únicamente al proceso que inicia.
+Cada URL contiene una credencial aleatoria. Vercel valida su hash, vigencia y colección
+antes de leer o guardar configuración editorial. Tienda guarda su composición bajo
+la clave de colección `tienda`; las recetas `almacenista`, `asesor`, `cajero`, `gerente`
+y `gerente_zona` siguen separadas únicamente en datos. Cambiar la URL manualmente no
+concede acceso a Staff, Cobranza o Capacitación especializada. `studio stop` revoca todos
+los enlaces y la variante con colección revoca solamente ese alcance.
 
-El iniciador selecciona puertos disponibles, abre un túnel que entra por `/studio` y bloquea la navegación HTML hacia el área de Reportes. El enlace existe únicamente mientras el comando permanezca abierto. `Ctrl+C` apaga el túnel y la instancia local iniciada por el comando.
+El enlace no solicita Google ni otra cuenta. Cualquiera que lo posea puede editar la
+colección autorizada hasta que expire o sea revocado, por lo que debe tratarse como
+una contraseña temporal. Los valores visibles siguen siendo ficticios.
 
-El túnel exige iniciar sesión con una cuenta Google de `coppel.com`. Solo reenvía a Macintosh la lectura y escritura de la configuración editorial; las rutas de tableros, pendientes, detalles y vistas reales quedan bloqueadas. Al usar `npm run studio:share` directamente, `MACINTOSH_STUDIO_TOKEN` debe tener el mismo valor privado en Macintosh y en el entorno local de Studio; el comando `studio share` de Macintosh coordina esa clave automáticamente.
+Para desplegar una versión nueva:
 
-Si aparece `ERR_NGROK_105`, la credencial guardada no es el authtoken del agente.
-Copia el comando completo desde **Your Authtoken** en el panel de ngrok y vuelve a
-ejecutar `ngrok config add-authtoken ...`; un API key, identificador de usuario o
-inicio de sesión del navegador no sustituye ese valor.
+```bash
+npm install
+npm run build
+npm run deploy
+```
 
-Los valores de negocio visibles en `/studio` son siempre ficticios, tanto en local como mediante ngrok. La biblioteca normal de Reportes conserva su conexión separada con los datos publicados.
+El proyecto de Vercel requiere `MACINTOSH_FIREBASE_SERVICE_ACCOUNT_JSON` como secreto
+cifrado de producción. Su valor es el JSON completo de la cuenta de servicio que usa
+Macintosh; nunca debe guardarse en `.env.local`, Git, documentación o capturas.
+
+El flujo anterior de ngrok se conserva únicamente como alternativa futura mediante
+`npm run studio:share:ngrok`; no forma parte de la operación normal.
 
 ## Seguridad
 
-Los colaboradores de prueba usan nombres e identificadores sintéticos. Firestore no se consulta directamente desde el navegador: Macintosh conserva la credencial, valida las rutas y limita los campos editables. El enlace temporal usa autenticación Google restringida al dominio corporativo.
+Los colaboradores de prueba usan nombres e identificadores sintéticos. Firestore no
+se consulta directamente desde el navegador: las funciones de Vercel conservan la
+credencial, validan el enlace y limitan los campos editables. No hay autenticación
+Google en el flujo público actual.
 
 ## Continuar en Windows
 
@@ -102,15 +139,17 @@ npm install
 npm run dev
 ```
 
-o desde la terminal de Macintosh:
+Los enlaces compartidos no requieren que Studio esté ejecutándose en Windows. Se
+administran desde la terminal de Macintosh:
 
 ```text
-studio share
+studio tienda share
 studio status
 studio stop
 ```
 
-Para compartir necesitas Node.js 22.13 o posterior, ngrok instalado y una cuenta de ngrok autorizada. El valor predeterminado de `MACINTOSH_STUDIO_PATH` funciona cuando ambas carpetas son hermanas; si cambias la ubicación, declara la ruta completa en `Macintosh\backend\.env`.
+La computadora local necesita la cuenta de servicio configurada en Macintosh para
+crear o revocar enlaces. Vercel mantiene la aplicación publicada de forma independiente.
 
 ## Validación
 

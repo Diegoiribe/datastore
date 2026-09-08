@@ -22,11 +22,24 @@ consultando `/api/dashboard`.
 
 - El diseño de Studio reutiliza encabezado, catálogo, carátulas, filtros, hoja y
   escala del visor de Reportes.
-- Los textos permitidos se editan directamente dentro de la hoja.
-- El título editado se refleja en portada, menú y encabezado, pero conserva claves
-  como `almacenista` en backend y rutas.
-- Las secciones Presentación, Indicadores, Avance mensual, Ranking regional y Avance
-  por curso se pueden reordenar y ocultar.
+- Los textos permitidos se editan directamente dentro de la hoja; el título de la colección no se edita.
+- Tienda, Staff, Cobranza y Capacitación especializada usan una sola plantilla
+  visual por colección aunque sus reportes de datos conserven claves independientes.
+- Capacitación especializada conserva la plantilla financiera EIC del antiguo
+  DataStore. En `/studio` sus 16 vistas se simulan en
+  `lib/studio-demo-data.ts`; en `/` proceden de la receta local `eic_maestro` de Macintosh.
+- Tienda, Staff y Cobranza permiten reordenar y ocultar Presentación, Indicadores,
+  Avance mensual, Ranking regional y Avance por curso. Capacitación especializada
+  usa diez bloques propios de la plantilla EIC, desde Presentación hasta Planes y
+  capacitaciones.
+- Reportes carga y aplica el mismo `layout.order` y `layout.hidden` persistido por
+  Studio; el orden editorial no queda limitado a la vista de edición.
+- La plantilla EIC admite edición directa de sus títulos, subtítulos, etiquetas
+  financieras y presentación; no solo orden y visibilidad.
+- El flujo operativo EIC usa cuatro gráficas de pastel: Cotizaciones,
+  Capacitaciones, Contratación y Pagos. Cada leyenda controla por
+  hover y teclado el segmento destacado y reemplaza temporalmente el total por su
+  porcentaje.
 - El movimiento usa una transición FLIP para evitar saltos bruscos.
 - El botón **Guardar** permanece gris sin cambios y se vuelve negro cuando cambia
   texto, orden o visibilidad. Antes de pulsarlo, todo permanece como borrador local.
@@ -34,6 +47,13 @@ consultando `/api/dashboard`.
   `layout.order` y `layout.hidden`.
 - Los mensajes del servicio y las fechas de corte no son editables.
 - El indicador de Studio dice **Datos de prueba**; nunca **Datos reales**.
+- El clic derecho dentro de la hoja abre un compositor de comentario. Los
+  comentarios se fijan inmediatamente, usan coordenadas relativas para acompañar
+  el scroll y aparecen al hacer hover o foco sobre el pin. Al hacer clic la tarjeta
+  permanece abierta y permite completar el comentario o eliminarlo.
+- Los comentarios nuevos se anclan al bloque donde nacieron y viajan con él al
+  reordenar. Los registros anteriores con un bloque identificado también viajan
+  con él mediante una conversión compatible en el navegador.
 
 ## Archivos principales
 
@@ -41,25 +61,22 @@ consultando `/api/dashboard`.
 - `app/globals.css`: sistema visual, selección, movimiento y estados del botón.
 - `lib/dashboard-data.ts`: cliente de Macintosh para Reportes y configuración editorial.
 - `lib/studio-demo-data.ts`: única fuente de valores visibles en `/studio`.
-- `scripts/share-studio.mjs`: Vinext, gateway restringido y proceso ngrok.
-- `ngrok-traffic-policy.yml`: Google OAuth y restricción `@coppel.com`.
+- `lib/vercel-studio-store.ts`: validación de enlaces, alcance y campos en Vercel.
+- `app/api/studio/share/session/route.ts`: sesión pública limitada por colección.
+- `app/api/studio/reports/[reportKey]/copy/route.ts`: lectura y guardado editorial.
+- `proxy.ts`: redirección de `/` a `/studio` únicamente en Vercel.
 - `tests/rendered-html.test.mjs`: verificación de ambas rutas.
 
-## Contrato de seguridad del túnel
+## Contrato de seguridad de Vercel
 
-El gateway:
-
-1. redirige `/` a `/studio`;
-2. rechaza navegación HTML fuera de `/studio`;
-3. permite únicamente `GET` y `PUT` sobre
-   `/api/studio/reports/{clave}/copy`;
-4. bloquea catálogo, tableros, pendientes, detalles y vistas reales;
-5. añade la clave privada editorial en el servidor local, nunca en el navegador;
-6. oculta un authtoken si ngrok intenta imprimirlo en un error.
-
-Cuando ya existe un servidor Vinext del mismo proyecto, el iniciador lee el lock
-local, verifica la ruta y reutiliza su puerto. Esto evita el error de “another vinext
-dev server is already running”.
+- `/` redirige a `/studio` en el despliegue público.
+- Una URL sin credencial vigente muestra acceso rechazado.
+- La credencial se guarda en Firestore solamente como hash y vence en siete días.
+- El servidor valida la colección y la clave técnica en cada `GET` y `PUT`.
+- No existen endpoints públicos para tableros, pendientes, detalles o vistas reales.
+- El navegador recibe datos sintéticos y configuración editorial; nunca una cuenta de servicio.
+- El botón **Guardar** sigue siendo la única acción que persiste cambios.
+- **Fijar** persiste únicamente un comentario; no guarda borradores editoriales.
 
 ## Preparación en Windows
 
@@ -78,26 +95,30 @@ npm install
 npm run dev
 ```
 
-Para compartir desde Macintosh:
+Para administrar enlaces desde Macintosh:
 
 ```text
-studio share
+studio tienda share
+studio staff share
+studio cobranza share
+studio capacitación especializada share
 studio status
 studio stop
 ```
 
-Para compartir directamente desde este proyecto, configura el mismo valor privado de
-`MACINTOSH_STUDIO_TOKEN` en ambos entornos y usa `npm run studio:share`. La terminal
-de Macintosh es preferible porque coordina una clave efímera automáticamente.
+No se instala ngrok en Windows. Los enlaces apuntan al mismo despliegue de Vercel y
+solo cambia la credencial y el alcance almacenados por Macintosh.
 
-## Estado externo pendiente
+## Estado externo
 
-- El último intento de ngrok produjo `ERR_NGROK_105`: la credencial guardada no era
-  el authtoken válido del agente. Debe reemplazarse desde **Your Authtoken** en el
-  panel de ngrok.
-- El último entorno revisado no tenía la cuenta de servicio Firebase bajo
-  `Macintosh/backend/.secrets/firebase-service-account.json`. Sin ella se conserva
-  el borrador local, pero el botón no puede compartir la edición mediante Firebase.
+- Vercel está enlazado al proyecto `macintosh-studio` y el dominio estable es
+  `https://macintosh-studio.vercel.app`.
+- `MACINTOSH_FIREBASE_SERVICE_ACCOUNT_JSON` está cargado como secreto cifrado de
+  producción. No puede recuperarse mediante `vercel env pull`.
+- La prueba de extremo a extremo confirmó que un enlace de Tienda abre sus reportes,
+  rechaza Staff y puede revocarse sin afectar otros enlaces.
+- La API de comentarios confirmó creación y lectura compartidas; el comentario y el
+  enlace usados para la prueba se eliminaron al finalizar.
 - El repositorio contiene cambios locales sin commit. Transfiere la carpeta completa
   o crea y publica un commit deliberadamente antes de trabajar desde un clon nuevo.
 
@@ -114,9 +135,9 @@ tres advertencias conocidas por el uso intencional de `<img>` en reportes existe
 ## Reglas para la siguiente sesión
 
 - Inspeccionar `git status` antes de editar y preservar cambios existentes.
-- No desplegar este proyecto mediante Sites: el flujo acordado es local y ngrok.
+- El flujo público acordado es Vercel; no reintroducir ngrok como ruta predeterminada.
 - No introducir datos reales, nombres reales ni identificadores personales en demos o pruebas.
 - No abrir rutas de dashboard en el gateway de Studio.
 - No guardar automáticamente durante `blur`; solo el botón **Guardar** persiste.
-- No cambiar claves técnicas cuando se editen títulos visibles.
+- No volver editable el título de la colección ni crear una plantilla por puesto.
 - Actualizar README y este handoff si cambia el contrato de datos, guardado o túnel.
